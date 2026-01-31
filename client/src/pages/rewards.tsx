@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import RickshawWheel from "@/components/airbear-wheel";
+import AirbearWheel from "@/components/airbear-wheel";
 import LoadingSpinner from "@/components/loading-spinner";
 import {
   Award,

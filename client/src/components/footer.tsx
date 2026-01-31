@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { Twitter, Instagram, Facebook, Linkedin } from "lucide-react";
-import RickshawWheel from "./airbear-wheel";
 
 export default function Footer() {
   const quickLinks = [

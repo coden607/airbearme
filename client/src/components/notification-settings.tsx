@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { useToast } from "@/hooks/use-toast";
-import RickshawWheel from "@/components/airbear-wheel";
+import AirbearWheel from "@/components/airbear-wheel";
 import {
   Bell,
   BellOff,
@@ -114,7 +114,7 @@ export default function NotificationSettings() {
                   className={`${isSubscribed ? 'bg-red-500 hover:bg-red-600' : 'eco-gradient'} text-white hover-lift`}
                 >
                   {isLoading ? (
-                    <RickshawWheel size="sm" className="mr-2" />
+                    <AirbearWheel size="sm" className="mr-2" />
                   ) : isSubscribed ? (
                     <>
                       <BellOff className="mr-2 h-4 w-4" />

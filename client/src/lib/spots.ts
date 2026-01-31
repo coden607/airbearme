@@ -277,22 +277,26 @@ export const exportSpotsToCSV = (): string => {
 
 // Geofencing helper for location-based features
 export const isWithinSpotRadius = (
-  userLat: number, 
-  userLon: number, 
-  spotId: string, 
+  userLat: number,
+  userLon: number,
+  spotId: string,
   radiusMeters: number = 100
 ): boolean => {
   const spot = getSpotById(spotId);
   if (!spot) return false;
-  
-  const distance = getRouteDistance(
-    `user-${userLat}-${userLon}`, // Temporary ID for user location
-    spotId
-  );
-  
-  if (distance === null) return false;
-  
-  return (distance * 1000) <= radiusMeters; // Convert km to meters
+
+  const toRadians = (degrees: number) => degrees * (Math.PI / 180);
+  const R = 6371; // Earth's radius in kilometers
+  const dLat = toRadians(spot.latitude - userLat);
+  const dLon = toRadians(spot.longitude - userLon);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRadians(userLat)) * Math.cos(toRadians(spot.latitude)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distanceKm = R * c;
+
+  return (distanceKm * 1000) <= radiusMeters; // Convert km to meters
 };
 
 export default spots;

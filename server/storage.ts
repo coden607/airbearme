@@ -705,7 +705,7 @@ const isUsingTestCredentials =
   supabaseServiceRoleKey?.includes('test-supabase-secret-key-for-development-only');
 
 // Also force MemStorage if USE_MOCK_DATABASE is explicitly set
-const useMockDatabase = true ||
+const useMockDatabase = process.env.USE_MOCK_DATABASE === 'true' ||
                        process.env.NODE_ENV === "development" ||
                        process.env.VERCEL_ENV === 'development';
 

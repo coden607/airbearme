@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import RickshawWheel from "@/components/airbear-wheel";
+import AirbearWheel from "@/components/airbear-wheel";
 import LoadingSpinner from "@/components/loading-spinner";
 import {
   CreditCard,
@@ -93,7 +93,7 @@ function CheckoutForm({ clientSecret, orderId, rideId, onSuccess }: CheckoutForm
       >
         {isProcessing ? (
           <div className="flex items-center">
-            <RickshawWheel size="sm" className="mr-2" />
+            <AirbearWheel size="sm" className="mr-2" />
             Processing...
           </div>
         ) : (
@@ -319,7 +319,7 @@ export default function Checkout() {
                 transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                 className="inline-block mb-4"
               >
-                <RickshawWheel size="lg" />
+                <AirbearWheel size="lg" />
               </motion.div>
 
               <p className="text-sm text-muted-foreground">
@@ -360,7 +360,7 @@ export default function Checkout() {
             <Card className="glass-morphism" data-testid="card-order-summary">
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <RickshawWheel size="sm" className="mr-2" />
+                  <AirbearWheel size="sm" className="mr-2" />
                   Order Summary
                 </CardTitle>
               </CardHeader>

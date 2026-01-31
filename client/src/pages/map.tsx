@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import RickshawWheel from "@/components/airbear-wheel";
+import AirbearWheel from "@/components/airbear-wheel";
 import LoadingSpinner from "@/components/loading-spinner";
 import {
   estimateRideFare,

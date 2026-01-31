@@ -7,7 +7,6 @@ import CeoTshirtPromo from "@/components/ceo-tshirt-promo";
 import AirbearAvatar from "@/components/airbear-avatar";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { getSupabaseClient } from "@/lib/supabase-client";
 import { Loader2, Crown, Play, Leaf, Store, Route, Map } from "lucide-react";
 import { useState } from "react";
 

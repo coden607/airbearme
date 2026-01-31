@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import RickshawWheel from "@/components/airbear-wheel";
+import AirbearWheel from "@/components/airbear-wheel";
 import LoadingSpinner from "@/components/loading-spinner";
 import { 
   spots,
@@ -320,7 +320,7 @@ export default function Map() {
         >
           <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-2">
-              <RickshawWheel size="sm" className="text-primary" />
+              <AirbearWheel size="sm" className="text-primary" />
               <span className="font-semibold text-emerald-700">Live Map Status</span>
             </div>
             <div className="hidden sm:flex items-center space-x-4 text-sm text-emerald-600">
@@ -419,7 +419,7 @@ export default function Map() {
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg flex items-center justify-between">
                       <span className="truncate">{spot.name}</span>
-                      <RickshawWheel 
+                      <AirbearWheel 
                         size="sm" 
                         animated={availableAirbears.length > 0}
                         className={availableAirbears.length > 0 ? "text-primary" : "text-muted-foreground"}
@@ -477,7 +477,7 @@ export default function Map() {
           <DialogContent className="max-w-md" data-testid="dialog-book-ride">
             <DialogHeader>
               <DialogTitle className="flex items-center">
-                <RickshawWheel size="sm" className="mr-2" />
+                <AirbearWheel size="sm" className="mr-2" />
                 Book Your Ride (Demo)
               </DialogTitle>
             </DialogHeader>

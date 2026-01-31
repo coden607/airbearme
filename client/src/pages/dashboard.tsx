@@ -15,7 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { getSupabaseClient } from "@/lib/supabase-client";
-import RickshawWheel from "@/components/airbear-wheel";
+import AirbearWheel from "@/components/airbear-wheel";
 import LoadingSpinner from "@/components/loading-spinner";
 import {
   Leaf,
@@ -139,7 +139,7 @@ export default function Dashboard() {
         transition={{ duration: 0.8 }}
       >
         <div className="flex justify-center items-center space-x-3 mb-4">
-          <RickshawWheel size="lg" animated glowing />
+          <AirbearWheel size="lg" animated glowing />
           <div>
             <h1 className="text-3xl font-bold text-foreground">
               Welcome back, <span className="text-primary animate-pulse-glow">{user.username}</span>!
@@ -162,7 +162,7 @@ export default function Dashboard() {
       >
         <Card className="eco-gradient text-white overflow-hidden relative" data-testid="card-eco-points">
           <div className="absolute top-4 right-4">
-            <RickshawWheel size="lg" className="opacity-30" />
+            <AirbearWheel size="lg" className="opacity-30" />
           </div>
           <CardHeader>
             <CardTitle className="flex items-center text-white">
@@ -350,7 +350,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="text-center py-8">
-                <RickshawWheel size="lg" className="mx-auto mb-4 opacity-50" />
+                <AirbearWheel size="lg" className="mx-auto mb-4 opacity-50" />
                 <p className="text-muted-foreground">No rides yet. Ready to start your first journey?</p>
                 <Link to="/map">
                   <Button className="mt-4 eco-gradient text-white" data-testid="button-book-first-ride">
@@ -383,7 +383,7 @@ export default function Dashboard() {
         transition={{ duration: 0.8 }}
       >
         <div className="flex justify-center items-center space-x-3 mb-4">
-          <RickshawWheel size="lg" animated glowing />
+          <AirbearWheel size="lg" animated glowing />
           <div>
             <h1 className="text-3xl font-bold text-foreground">
               AirBear Driver Hub
@@ -470,7 +470,7 @@ export default function Dashboard() {
         transition={{ duration: 0.8 }}
       >
         <div className="flex justify-center items-center space-x-3 mb-4">
-          <RickshawWheel size="lg" animated glowing />
+          <AirbearWheel size="lg" animated glowing />
           <div>
             <h1 className="text-3xl font-bold text-foreground">
               AirBear Command Center
@@ -495,7 +495,7 @@ export default function Dashboard() {
         <Card className="glass-morphism" data-testid="card-total-airbears">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center">
-              <RickshawWheel size="sm" className="mr-2" />
+              <AirbearWheel size="sm" className="mr-2" />
               Total Fleet
             </CardTitle>
           </CardHeader>

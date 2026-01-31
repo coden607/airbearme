@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import RickshawWheel from "./airbear-wheel";
+import AirbearWheel from "./airbear-wheel";
 import { cn } from "@/lib/utils";
 
 interface LoadingSpinnerProps {
@@ -30,7 +30,7 @@ export default function LoadingSpinner({
     >
       {/* Multiple spinning wheels for extra effect */}
       <div className="relative">
-        <RickshawWheel 
+        <AirbearWheel 
           size={wheelSize} 
           glowing 
           className="animate-wheel-spin" 
@@ -46,7 +46,7 @@ export default function LoadingSpinner({
             ease: "linear" 
           }}
         >
-          <RickshawWheel 
+          <AirbearWheel 
             size={size} 
             className="opacity-50 border-emerald-400" 
           />

@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import RickshawWheel from "@/components/airbear-wheel";
+import AirbearWheel from "@/components/airbear-wheel";
 import LoadingSpinner from "@/components/loading-spinner";
 import {
   Target,
@@ -304,7 +304,7 @@ export default function Challenges() {
                     >
                       {completeChallengeMutation.isPending ? (
                         <div className="flex items-center">
-                          <RickshawWheel size="sm" className="mr-2" />
+                          <AirbearWheel size="sm" className="mr-2" />
                           Completing...
                         </div>
                       ) : (

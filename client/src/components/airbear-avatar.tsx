@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import RickshawWheel from "./airbear-wheel";
+import AirbearWheel from "./airbear-wheel";
 
 interface AirbearAvatarProps {
   size?: "sm" | "md" | "lg";
@@ -32,7 +32,7 @@ export default function AirbearAvatar({ size = "md", showBadge = true, className
 
       {/* Mini rickshaw energy ring */}
       <div className="absolute -bottom-3 left-1/2 -translate-x-1/2">
-        <RickshawWheel size={size === "lg" ? "md" : "sm"} animated glowing effectType="solar" />
+        <AirbearWheel size={size === "lg" ? "md" : "sm"} animated glowing effectType="solar" />
       </div>
 
       {showBadge && (

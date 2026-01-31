@@ -138,6 +138,7 @@ const prodCsp = {
     ],
     styleSrc: [
       "'self'",
+      "'unsafe-inline'",
       "https://unpkg.com",
       "https://fonts.googleapis.com"
     ],

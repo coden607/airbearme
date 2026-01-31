@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Moon, Sun, Menu, User, Settings, LogOut, Award, Gift, Map, Store, Trophy, Leaf } from "lucide-react";
 import { useTheme } from "next-themes";
-import RickshawWheel from "@/components/airbear-wheel";
 import { useAuth } from "@/hooks/use-auth";
 import { motion } from "framer-motion";
 

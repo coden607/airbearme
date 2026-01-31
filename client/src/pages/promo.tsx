@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Link } from "wouter";
-import RickshawWheel from "@/components/airbear-wheel";
+import AirbearWheel from "@/components/airbear-wheel";
 import { useToast } from "@/hooks/use-toast";
 import { purchaseCeoTshirt } from "@/lib/stripe";
 import { useMutation } from "@tanstack/react-query";
@@ -262,7 +262,7 @@ export default function Promo() {
                   </p>
                   <Link to="/map">
                     <Button className="eco-gradient text-white hover-lift">
-                      <RickshawWheel size="sm" className="mr-2" />
+                      <AirbearWheel size="sm" className="mr-2" />
                       Book Your Free AirBear Ride
                     </Button>
                   </Link>
