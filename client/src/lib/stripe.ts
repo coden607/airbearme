@@ -2,17 +2,17 @@ import { loadStripe, Stripe } from '@stripe/stripe-js';
 
 const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
 
-if (!stripePublicKey) {
-  throw new Error("VITE_STRIPE_PUBLIC_KEY is required for live Stripe / Apple Pay / Google Pay.");
-}
-
-if (stripePublicKey.startsWith("pk_test")) {
+if (stripePublicKey && stripePublicKey.startsWith("pk_test")) {
   console.warn("⚠️ Stripe is running with a test key. Use a live pk_live key for production.");
 }
 
 let stripePromise: Promise<Stripe | null> | null = null;
 
 export const getStripe = () => {
+  if (!stripePublicKey) {
+    console.warn("VITE_STRIPE_PUBLIC_KEY not configured. Stripe features unavailable.");
+    return Promise.resolve(null);
+  }
   if (!stripePromise) {
     stripePromise = loadStripe(stripePublicKey);
   }
