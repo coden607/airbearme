@@ -26,7 +26,7 @@ export default function DriverDashboard() {
                 .from('rides')
                 .select('*')
                 .eq('status', 'pending')
-                .order('created_at', { ascending: false });
+                .order('requested_at', { ascending: false });
             if (error) throw error;
             return data || [];
         },

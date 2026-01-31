@@ -21,13 +21,13 @@ const getStripe = () => {
 };
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
-const supabaseAdmin = supabaseUrl && supabaseSecretKey
-  ? createSupabaseAdminClient(supabaseUrl, supabaseSecretKey, { auth: { autoRefreshToken: false } })
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAdmin = supabaseUrl && supabaseServiceRoleKey
+  ? createSupabaseAdminClient(supabaseUrl, supabaseServiceRoleKey, { auth: { autoRefreshToken: false } })
   : null;
 
 if (!supabaseAdmin) {
-  console.warn("⚠️ Supabase admin client not configured. Set SUPABASE_URL and SUPABASE_SECRET_KEY for live auth.");
+  console.warn("⚠️ Supabase admin client not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY for live auth.");
 }
 
 const logRouteError = (req: Request, error: unknown) => {
@@ -43,7 +43,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       status: "ok",
       timestamp: new Date().toISOString(),
       supabaseUrl: supabaseUrl ? "configured" : "missing",
-      supabaseSecretKey: supabaseSecretKey ? "configured" : "missing",
+      supabaseServiceRoleKey: supabaseServiceRoleKey ? "configured" : "missing",
       stripeSecretKey: stripeSecretKey ? "configured" : "missing",
     });
   });

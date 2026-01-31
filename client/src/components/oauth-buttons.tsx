@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { getSupabaseClient } from "@/lib/supabase-client";
+import { assertSupabase } from "@/lib/supabase-client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
@@ -19,7 +19,7 @@ export function OAuthButtons({ isLoading = false, onAuthSuccess }: OAuthButtonsP
   const handleGoogleSignIn = async () => {
     try {
       setIsGoogleLoading(true);
-      const { data, error } = await getSupabaseClient().auth.signInWithOAuth({
+      const { data, error } = await assertSupabase().auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
@@ -47,7 +47,7 @@ export function OAuthButtons({ isLoading = false, onAuthSuccess }: OAuthButtonsP
   const handleAppleSignIn = async () => {
     try {
       setIsAppleLoading(true);
-      const { data, error } = await getSupabaseClient().auth.signInWithOAuth({
+      const { data, error } = await assertSupabase().auth.signInWithOAuth({
         provider: 'apple',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,

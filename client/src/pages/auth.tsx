@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { getSupabaseClient } from "@/lib/supabase-client";
+import { assertSupabase } from "@/lib/supabase-client";
 import AirbearWheel from "@/components/airbear-wheel";
 import LoadingSpinner from "@/components/loading-spinner";
 import { Eye, EyeOff, Mail, Lock, User, Loader2 } from "lucide-react";
@@ -46,7 +46,7 @@ export default function Auth() {
   const handleGoogleSignIn = async () => {
     try {
       setIsGoogleLoading(true);
-      const { data, error } = await getSupabaseClient().auth.signInWithOAuth({
+      const { data, error } = await assertSupabase().auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
@@ -74,7 +74,7 @@ export default function Auth() {
   const handleAppleSignIn = async () => {
     try {
       setIsAppleLoading(true);
-      const { data, error } = await getSupabaseClient().auth.signInWithOAuth({
+      const { data, error } = await assertSupabase().auth.signInWithOAuth({
         provider: 'apple',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,

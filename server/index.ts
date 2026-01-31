@@ -69,7 +69,9 @@ const devCsp = {
           "https://*.facebook.com",
           "https://*.fbcdn.net",
           "https://*.tile.openstreetmap.org",
-          "https://tile.openstreetmap.org"
+          "https://tile.openstreetmap.org",
+          "https://images.unsplash.com",
+          "https://*.unsplash.com"
         ],
         fontSrc: [
           "'self'",
@@ -93,6 +95,9 @@ const devCsp = {
         frameSrc: [
           "'self'",
           "https://js.stripe.com",
+          "https://hooks.stripe.com",
+          "https://vercel.live",
+          "https://*.vercel.live",
           "https://*.facebook.com"
         ],
         mediaSrc: [

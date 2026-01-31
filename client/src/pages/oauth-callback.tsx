@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
-import { getSupabaseClient } from "@/lib/supabase-client";
+import { assertSupabase } from "@/lib/supabase-client";
 import { useToast } from "@/hooks/use-toast";
 
 export default function OAuthCallback() {
@@ -12,7 +12,7 @@ export default function OAuthCallback() {
     const handleOAuthCallback = async () => {
       try {
         // Get the session from the URL hash
-        const { data, error } = await getSupabaseClient().auth.getSession();
+        const { data, error } = await assertSupabase().auth.getSession();
         
         if (error) {
           console.error('OAuth callback error:', error);
