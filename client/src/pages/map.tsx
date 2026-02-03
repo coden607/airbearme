@@ -37,6 +37,8 @@ interface Spot {
   latitude: number | string;
   longitude: number | string;
   isActive?: boolean;
+  description?: string;
+  amenities?: string[];
 }
 
 interface Airbear {
@@ -433,8 +435,8 @@ export default function Map() {
       marker.bindPopup(popupContent);
 
       // Add hover effect
-      marker.on('mouseover', function() {
-        this.openPopup();
+      marker.on('mouseover', () => {
+        marker.openPopup();
       });
 
       if (hasAirbears) {
@@ -562,13 +564,10 @@ export default function Map() {
             )}
             
             {airbear.isAvailable && (
-              <button 
-                onClick={() => window.selectAirBearForRide(airbear.id)}
-                className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 
-                       text-white rounded-lg hover:shadow-lg transition-all text-xs font-semibold"
-              >
-                🚀 Book This AirBear
-              </button>
+              <div className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-blue-500 to-indigo-500
+                       text-white rounded-lg text-center text-xs font-semibold">
+                🚀 Available for Booking
+              </div>
             )}
           </div>
         </div>
