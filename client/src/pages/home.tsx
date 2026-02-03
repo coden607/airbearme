@@ -126,10 +126,10 @@ export default function Home() {
             transition={{ duration: 0.8, delay: 0.2 }}
           >
             <span className="bg-gradient-to-r from-emerald-600 via-lime-500 to-amber-500 bg-clip-text text-transparent animate-pulse-glow airbear-holographic text-outline-strong">
-              Welcome to AirBear
+              AirBear
             </span>
             <br />
-            <span className="text-foreground airbear-solar-rays">Solar Powered Rideshare</span>
+            <span className="text-foreground airbear-solar-rays">Mobile Bodega & Solar Rideshare</span>
 
             {/* Holographic overlay effect */}
             <div className="absolute inset-0 pointer-events-none">
@@ -164,9 +164,9 @@ export default function Home() {
           >
             <span className="text-primary font-bold animate-shimmer">Experience the future of sustainable transportation!</span>
             <br />
-            Solar-powered vehicles with onboard shopping experiences,
+            Solar-powered rideshare with mobile bodegas onboard,
             <span className="text-emerald-500 font-semibold airbear-god-rays"> zero emissions</span>, and
-            <span className="text-amber-500 font-semibold"> revolutionary eco-mobility!</span>
+            <span className="text-amber-500 font-semibold"> shop while you ride!</span>
           </motion.p>
 
           {/* CTA Buttons */}

@@ -24,7 +24,7 @@ export default defineConfig({
       includeAssets: ['airbear-mascot.png', 'c4v-logo.svg'],
       manifestFilename: 'manifest.json',
       manifest: {
-        name: 'AirBear - Solar Rickshaw Ride Share',
+        name: 'AirBear - Solar Electric Ride Share',
         short_name: 'AirBear',
         description: 'Eco-friendly solar-powered rides in Binghamton, NY with onboard bodegas',
         theme_color: '#10b981',
