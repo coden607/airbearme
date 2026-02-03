@@ -194,6 +194,18 @@ export default function Map() {
     }
   }, [spotsError, airbearError, toast]);
 
+  // Safety timeout to prevent infinite loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (mapLoading || spotsLoading || airbearLoading) {
+        console.warn('Map loading timeout - forcing completion');
+        setMapLoading(false);
+      }
+    }, 15000); // 15 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [mapLoading, spotsLoading, airbearLoading]);
+
   // Initialize Leaflet map
   useEffect(() => {
     if (!mapRef.current || mapReady) return;
@@ -201,24 +213,16 @@ export default function Map() {
     const initMap = async () => {
       try {
         setMapLoading(true);
-        // Load Leaflet from CDN
-        if (!window.L) {
-          // Create and append Leaflet CSS
-          const leafletCSS = document.createElement('link');
-          leafletCSS.rel = 'stylesheet';
-          leafletCSS.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-          leafletCSS.crossOrigin = 'anonymous';
-          document.head.appendChild(leafletCSS);
 
-          // Load Leaflet JavaScript
-          await new Promise((resolve, reject) => {
-            const leafletJS = document.createElement('script');
-            leafletJS.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-            leafletJS.crossOrigin = 'anonymous';
-            leafletJS.onload = resolve;
-            leafletJS.onerror = reject;
-            document.head.appendChild(leafletJS);
-          });
+        // Wait for Leaflet to be available (it's already loaded in index.html)
+        let attempts = 0;
+        while (!window.L && attempts < 50) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+
+        if (!window.L) {
+          throw new Error('Leaflet library not loaded');
         }
 
         // Initialize map
