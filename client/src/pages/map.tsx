@@ -83,16 +83,22 @@ export default function Map() {
   const [mapReady, setMapReady] = useState(false);
   const [mapLoading, setMapLoading] = useState(true);
 
+  console.log('Map component render:', { mapLoading, mapReady });
+
   const { data: spotsData = [], isLoading: spotsLoading, error: spotsError } = useQuery<Spot[]>({
     queryKey: ["spots"],
     queryFn: async () => {
+      console.log('Fetching spots...');
       try {
         const response = await fetch('/api/spots');
+        console.log('Spots response:', response.status);
         if (!response.ok) {
+          console.log('Spots API failed, using fallback');
           // Fallback to static data if API fails
           return getActiveSpots().map(s => ({ ...s, latitude: Number(s.latitude), longitude: Number(s.longitude) }));
         }
         const data = await response.json();
+        console.log('Spots loaded:', data.length);
         return data.map((spot: any) => ({
           ...spot,
           latitude: Number(spot.latitude ?? spot.lat ?? spot.latitide),
@@ -105,17 +111,22 @@ export default function Map() {
       }
     },
     retry: 1,
+    staleTime: 30000,
   });
 
   const { data: airbearsQueryData = [], isLoading: airbearLoading, error: airbearError } = useQuery<Airbear[]>({
     queryKey: ["airbears-initial"],
     queryFn: async () => {
+      console.log('Fetching airbears...');
       try {
         const response = await fetch('/api/airbears');
+        console.log('AirBears response:', response.status);
         if (!response.ok) {
+          console.log('AirBears API failed');
           return [];
         }
         const data = await response.json();
+        console.log('AirBears loaded:', data.length);
         return data.map((item: any) => ({
           id: item.id,
           currentSpotId: item.current_spot_id ?? "",
@@ -132,6 +143,7 @@ export default function Map() {
       }
     },
     retry: 1,
+    staleTime: 30000,
   });
 
   // Use the realtime hook for live updates
@@ -212,6 +224,7 @@ export default function Map() {
 
     const initMap = async () => {
       try {
+        console.log('Initializing map...');
         setMapLoading(true);
 
         // Wait for Leaflet to be available (it's already loaded in index.html)
@@ -222,8 +235,11 @@ export default function Map() {
         }
 
         if (!window.L) {
+          console.error('Leaflet library not loaded after', attempts, 'attempts');
           throw new Error('Leaflet library not loaded');
         }
+
+        console.log('Leaflet loaded, creating map...');
 
         // Initialize map
         const map = window.L.map(mapRef.current, {
@@ -231,6 +247,8 @@ export default function Map() {
           zoom: 12,
           zoomControl: false,
         });
+
+        console.log('Map instance created');
 
         // Add zoom controls
         const zoomControl = window.L.control.zoom({
@@ -276,6 +294,7 @@ export default function Map() {
         mapInstanceRef.current = map;
         setMapReady(true);
         setMapLoading(false);
+        console.log('Map initialization complete!');
 
       } catch (error) {
         console.error('Error initializing map:', error);
@@ -782,11 +801,18 @@ export default function Map() {
     }
   };
 
+  console.log('Loading states:', { mapLoading, spotsLoading, airbearLoading, mapReady });
+
   if (mapLoading || spotsLoading || airbearLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <LoadingSpinner size="lg" text="Loading map..." />
+          <div className="mt-4 text-sm text-muted-foreground">
+            {mapLoading && <div>Map initializing...</div>}
+            {spotsLoading && <div>Loading spots...</div>}
+            {airbearLoading && <div>Loading AirBears...</div>}
+          </div>
         </div>
       </div>
     );
