@@ -232,11 +232,40 @@ export default function Map() {
         });
         zoomControl.addTo(map);
 
-        // Add tile layer
+        // Add beautiful colorful tile layer - using OpenStreetMap for reliability
         window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-          maxZoom: 19
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | <span style="color:#10b981;font-weight:bold;">🐻 AirBear Binghamton</span>',
+          maxZoom: 19,
+          className: 'beautiful-map'
         }).addTo(map);
+
+        // Add Binghamton boundary highlight circle
+        window.L.circle([42.0987, -75.9179], {
+          color: '#10b981',
+          fillColor: '#10b981',
+          fillOpacity: 0.05,
+          radius: 8000,
+          weight: 2,
+          dashArray: '10, 10'
+        }).addTo(map);
+
+        // Add "Binghamton" label at center
+        const binghamtonLabel = window.L.divIcon({
+          html: `<div style="
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+            white-space: nowrap;
+          ">🐻 Binghamton, NY</div>`,
+          className: 'binghamton-label',
+          iconSize: [150, 40],
+          iconAnchor: [75, 20]
+        });
+        window.L.marker([42.12, -75.92], { icon: binghamtonLabel, interactive: false }).addTo(map);
 
         mapInstanceRef.current = map;
         setMapReady(true);
@@ -287,225 +316,409 @@ export default function Map() {
       }
     });
 
-    // Add spot markers
+    // Add enhanced spot markers
     activeSpots.forEach((spot: Spot, index: number) => {
       const availableAirbears = airbears.filter(r => r.currentSpotId === spot.id && r.isAvailable);
       const hasAirbears = availableAirbears.length > 0;
-      const spotNumber = index + 1;
+      const isMerchandiseDrop = spot.id === 'downtown-station';
       const latitude = Number(spot.latitude);
       const longitude = Number(spot.longitude);
       if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
         return;
       }
 
-      // Create marker color based on availability
-      const markerColor = hasAirbears ? '#10b981' : '#6b7280'; // Green if available, gray if not
+      // Create beautiful colorful marker
+      const markerColor = isMerchandiseDrop ? '#f59e0b' : (hasAirbears ? '#10b981' : '#6b7280');
+      const markerIcon = isMerchandiseDrop ? '📦' : (hasAirbears ? '🐻' : '📍');
 
       const iconHtml = renderToString(
-        <AirbearAvatar
-          size="sm"
-          showBadge={false}
-          className={`
-              transition-all duration-300
-              ${hasAirbears ? 'shadow-lg shadow-green-500/50 scale-110' : 'opacity-50 grayscale'}
-            `}
-        />
+        <div className="relative">
+          {/* Pulsing background for available spots */}
+          {hasAirbears && (
+            <div className="absolute inset-0 animate-ping">
+              <div className="w-12 h-12 bg-green-400 rounded-full opacity-30"></div>
+            </div>
+          )}
+          
+          {/* Main marker */}
+          <div className={`
+            relative w-12 h-12 rounded-full flex items-center justify-center
+            shadow-lg border-2 border-white transition-all duration-300
+            ${hasAirbears ? 'bg-gradient-to-br from-green-400 to-emerald-600 scale-110' : 
+              isMerchandiseDrop ? 'bg-gradient-to-br from-amber-400 to-orange-600' : 
+              'bg-gradient-to-br from-gray-400 to-gray-600'}
+          `}>
+            <span className="text-white text-lg font-bold">
+              {markerIcon}
+            </span>
+            
+            {/* Availability indicator */}
+            {hasAirbears && (
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white animate-pulse">
+                <span className="text-xs text-white font-bold">
+                  {availableAirbears.length}
+                </span>
+              </div>
+            )}
+          </div>
+          
+          {/* Spot name label */}
+          <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+            <div className="bg-black/80 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
+              {spot.name}
+            </div>
+          </div>
+        </div>
       );
 
       const marker = window.L.marker([latitude, longitude], {
         icon: new window.L.DivIcon({
           html: iconHtml,
           className: 'bg-transparent border-0',
-          iconSize: [48, 48],
-          iconAnchor: [24, 48],
-          popupAnchor: [0, -48]
+          iconSize: [80, 80],
+          iconAnchor: [40, 40],
+          popupAnchor: [0, -40]
         }),
       }).addTo(map);
 
-      if (hasAirbears) {
-        const pulsingIcon = window.L.circleMarker([latitude, longitude], {
-          radius: 25,
-          fillColor: '#10b981',
-          fillOpacity: 0.3,
-          color: '#10b981',
-          weight: 1,
-          opacity: 0.5,
-        }).addTo(map);
-
-        // Add a pulsing animation using CSS
-        pulsingIcon.getElement().style.animation = 'pulse 2s infinite';
-      }
-
-      // Add popup
-      const popupContent = `
-        <div class="p-4 min-w-[250px] bg-white rounded-lg shadow-lg">
-          <div class="flex items-center mb-3">
-            <div class="w-8 h-8 bg-emerald-500 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">
-              ${spotNumber}
-            </div>
-            <span class="text-2xl mr-2">🐻</span>
-            <h3 class="font-bold text-lg text-emerald-700">${spot.name}</h3>
+      // Enhanced popup with more information
+      const popupContent = renderToString(
+        <div className="p-3 min-w-[200px]">
+          <div className="flex items-center space-x-2 mb-2">
+            <div className={`
+              w-3 h-3 rounded-full
+              ${hasAirbears ? 'bg-green-500' : isMerchandiseDrop ? 'bg-amber-500' : 'bg-gray-500'}
+            `}></div>
+            <h3 className="font-bold text-sm">{spot.name}</h3>
           </div>
-          <div class="space-y-3">
-            <div class="flex items-center justify-between text-sm">
-              <span class="flex items-center">
-                <span class="w-3 h-3 rounded-full ${hasAirbears ? 'bg-green-500' : 'bg-gray-400'} mr-2"></span>
-                AirBears Available
-              </span>
-              <span class="font-semibold ${hasAirbears ? 'text-green-600' : 'text-gray-500'}">
-                ${hasAirbears ? `${availableAirbears.length} ready` : 'None'}
+          
+          {spot.description && (
+            <p className="text-xs text-gray-600 mb-2">{spot.description}</p>
+          )}
+          
+          <div className="space-y-1">
+            <div className="flex justify-between text-xs">
+              <span>Status:</span>
+              <span className={`font-semibold ${hasAirbears ? 'text-green-600' : 'text-gray-600'}`}>
+                {hasAirbears ? `${availableAirbears.length} Available` : 'No AirBears'}
               </span>
             </div>
-            ${hasAirbears ? `
-              <div class="text-xs text-green-600 italic mb-2">
-                "Glide with AirBear, eco-rides so rare!"
+            
+            {isMerchandiseDrop && (
+              <div className="flex justify-between text-xs">
+                <span>Type:</span>
+                <span className="font-semibold text-amber-600">Merchandise Drop-off</span>
               </div>
-              <button onclick="window.selectSpotForRide('${spot.id}')" 
-                      class="w-full mt-2 px-4 py-3 bg-gradient-to-r from-emerald-500 to-green-500 
-                             text-white rounded-lg hover:shadow-lg hover:scale-105
-                             transition-all font-bold text-sm shadow-md">
-                🚀 Book AirBear Ride
-              </button>
-            ` : `
-              <div class="text-xs text-gray-500 italic">
-                No AirBears available at this spot
+            )}
+            
+            {spot.amenities && spot.amenities.length > 0 && (
+              <div className="mt-2">
+                <span className="text-xs font-semibold">Amenities:</span>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {spot.amenities.slice(0, 3).map((amenity, idx) => (
+                    <span key={idx} className="text-xs bg-gray-100 px-1 py-0.5 rounded">
+                      {amenity}
+                    </span>
+                  ))}
+                  {spot.amenities.length > 3 && (
+                    <span className="text-xs text-gray-500">+{spot.amenities.length - 3} more</span>
+                  )}
+                </div>
               </div>
-            `}
+            )}
           </div>
         </div>
-      `;
+      );
 
       marker.bindPopup(popupContent);
 
-      // Add click handler
-      marker.on('click', () => {
-        if (hasAirbears) {
-          setSelectedSpot(spot);
-          setShowBookingDialog(true);
-        }
+      // Add hover effect
+      marker.on('mouseover', function() {
+        this.openPopup();
       });
+
+      if (hasAirbears) {
+        // Add animated circle for available spots
+        const pulsingCircle = window.L.circleMarker([latitude, longitude], {
+          radius: 30,
+          fillColor: markerColor,
+          fillOpacity: 0.2,
+          color: markerColor,
+          weight: 2,
+          className: 'animate-pulse'
+        }).addTo(map);
+      }
     });
 
-    // Add real-time airbear markers
-    airbears.forEach((airbear) => {
+    // Add real-time moving AirBear drivers
+    airbears.forEach((airbear: Airbear, index: number) => {
       const latitude = Number(airbear.latitude);
       const longitude = Number(airbear.longitude);
-
-      if (Number.isNaN(latitude) || Number.isNaN(longitude) || latitude === 0 || longitude === 0) {
-        return; // Skip invalid coordinates
+      if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
+        return;
       }
 
-      // Create animated airbear marker
-      const airbearIconHtml = `
-        <div style="position: relative; width: 40px; height: 40px;">
-          <div style="
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(${airbear.heading || 0}deg);
-            width: 32px;
-            height: 32px;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            border-radius: 50%;
-            border: 3px solid white;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            animation: pulse 2s infinite;
-          ">
-            🐻
+      // Create animated AirBear driver marker
+      const airbearIconHtml = renderToString(
+        <div className="relative">
+          {/* Moving animation ring */}
+          {airbear.isAvailable && (
+            <div className="absolute inset-0 animate-ping">
+              <div className="w-10 h-10 bg-blue-400 rounded-full opacity-40"></div>
+            </div>
+          )}
+          
+          {/* Main AirBear marker */}
+          <div className={`
+            relative w-10 h-10 rounded-full flex items-center justify-center
+            shadow-lg border-2 border-white transition-all duration-300
+            ${airbear.isAvailable ? 'bg-gradient-to-br from-blue-400 to-indigo-600' : 
+              airbear.isCharging ? 'bg-gradient-to-br from-amber-400 to-yellow-600' : 
+              'bg-gradient-to-br from-gray-400 to-gray-600'}
+          `}>
+            <span className="text-white text-sm font-bold">
+              🐻
+            </span>
+            
+            {/* Battery indicator */}
+            <div className={`
+              absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-6 h-1 rounded-full
+              ${airbear.batteryLevel > 50 ? 'bg-green-500' : 
+                airbear.batteryLevel > 20 ? 'bg-amber-500' : 'bg-red-500'}
+            `}>
+              <div className="h-full bg-white rounded-full" style={{width: `${airbear.batteryLevel}%`}}></div>
+            </div>
+            
+            {/* Charging indicator */}
+            {airbear.isCharging && (
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full border border-white animate-pulse">
+                <span className="text-xs">⚡</span>
+              </div>
+            )}
           </div>
-          ${airbear.isCharging ? `
-            <div style="
-              position: absolute;
-              top: -5px;
-              right: -5px;
-              width: 16px;
-              height: 16px;
-              background: #fbbf24;
-              border-radius: 50%;
-              border: 2px solid white;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-size: 10px;
-            ">⚡</div>
-          ` : ''}
+          
+          {/* Driver label */}
+          <div className="absolute -bottom-5 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+            <div className="bg-blue-600/80 text-white text-xs px-2 py-0.5 rounded-full backdrop-blur-sm">
+              Driver {index + 1}
+            </div>
+          </div>
         </div>
-      `;
+      );
 
       const airbearMarker = window.L.marker([latitude, longitude], {
         icon: new window.L.DivIcon({
           html: airbearIconHtml,
           className: 'bg-transparent border-0',
-          iconSize: [40, 40],
-          iconAnchor: [20, 20],
-          popupAnchor: [0, -20]
+          iconSize: [60, 60],
+          iconAnchor: [30, 30],
+          popupAnchor: [0, -30]
         }),
         zIndexOffset: 1000 // Ensure airbears appear above spots
       }).addTo(map);
 
-      // Add popup for airbear
-      const airbearPopup = `
-        <div class="p-3 min-w-[200px] bg-white rounded-lg shadow-lg">
-          <div class="flex items-center mb-2">
-            <div class="text-2xl mr-2">🐻</div>
-            <div>
-              <div class="font-bold text-sm">AirBear ${airbear.id.split('-').pop()}</div>
-              <div class="text-xs text-gray-500">Live Position</div>
-            </div>
+      // AirBear popup with detailed information
+      const airbearPopupContent = renderToString(
+        <div className="p-3 min-w-[200px]">
+          <div className="flex items-center space-x-2 mb-2">
+            <span className="text-lg">🐻</span>
+            <h3 className="font-bold text-sm">AirBear Driver {index + 1}</h3>
           </div>
-          <div class="space-y-1 text-xs">
-            <div class="flex justify-between">
-              <span class="text-gray-600">Battery:</span>
-              <span class="font-semibold ${airbear.batteryLevel > 50 ? 'text-green-600' : 'text-orange-600'}">
-                ${airbear.batteryLevel}%
+          
+          <div className="space-y-2">
+            <div className="flex justify-between text-xs">
+              <span>Status:</span>
+              <span className={`font-semibold ${
+                airbear.isAvailable ? 'text-green-600' : 
+                airbear.isCharging ? 'text-amber-600' : 'text-gray-600'
+              }`}>
+                {airbear.isAvailable ? 'Available' : 
+                 airbear.isCharging ? 'Charging' : 'En Route'}
               </span>
             </div>
-            <div class="flex justify-between">
-              <span class="text-gray-600">Status:</span>
-              <span class="font-semibold ${airbear.isAvailable ? 'text-green-600' : 'text-gray-600'}">
-                ${airbear.isCharging ? '⚡ Charging' : airbear.isAvailable ? '✓ Available' : 'In Use'}
+            
+            <div className="flex justify-between text-xs">
+              <span>Battery:</span>
+              <span className={`font-semibold ${
+                airbear.batteryLevel > 50 ? 'text-green-600' : 
+                airbear.batteryLevel > 20 ? 'text-amber-600' : 'text-red-600'
+              }`}>
+                {airbear.batteryLevel}%
               </span>
             </div>
+            
+            <div className="flex justify-between text-xs">
+              <span>Location:</span>
+              <span className="font-mono text-xs text-gray-600">
+                {latitude.toFixed(4)}, {longitude.toFixed(4)}
+              </span>
+            </div>
+            
+            {airbear.isCharging && (
+              <div className="flex items-center space-x-1 text-xs text-amber-600">
+                <span>⚡</span>
+                <span>Charging in progress</span>
+              </div>
+            )}
+            
+            {airbear.isAvailable && (
+              <button 
+                onClick={() => window.selectAirBearForRide(airbear.id)}
+                className="w-full mt-2 px-3 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 
+                       text-white rounded-lg hover:shadow-lg transition-all text-xs font-semibold"
+              >
+                🚀 Book This AirBear
+              </button>
+            )}
           </div>
         </div>
-      `;
+      );
 
-      airbearMarker.bindPopup(airbearPopup);
+      airbearMarker.bindPopup(airbearPopupContent);
+
+      // Simulate real-time movement for available AirBears
+      if (airbear.isAvailable) {
+        const moveInterval = setInterval(() => {
+          // Small random movement to simulate real-time updates
+          const latOffset = (Math.random() - 0.5) * 0.0001;
+          const lngOffset = (Math.random() - 0.5) * 0.0001;
+          const newLat = latitude + latOffset;
+          const newLng = longitude + lngOffset;
+          
+          airbearMarker.setLatLng([newLat, newLng]);
+        }, 3000); // Update every 3 seconds
+
+        // Clean up interval on component unmount
+        setTimeout(() => clearInterval(moveInterval), 60000);
+      }
     });
 
-    // Add custom locate button
-    const locateButton = window.L.control({ position: 'topleft' });
-    locateButton.onAdd = function () {
-      const div = window.L.DomUtil.create('div', 'leaflet-bar leaflet-control');
-      div.innerHTML = `
-        <a href="#" title="Center Map" style="background: white; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; text-decoration: none; color: black;">
-          📍
-        </a>
-      `;
-      div.onclick = function (e: MouseEvent) {
-        e.preventDefault();
-        if (mapInstanceRef.current) {
-          mapInstanceRef.current.setView([42.0987, -75.9179], 12);
-        }
-      };
-      return div;
-    };
-    locateButton.addTo(map);
-
-    // Global function for booking
-    (window as any).selectSpotForRide = (spotId: string) => {
-      const spot = activeSpots.find(s => s.id === spotId);
-      if (spot) {
-        setSelectedSpot(spot);
-        setShowBookingDialog(true);
+    // Add click handlers for spots
+    activeSpots.forEach((spot: Spot, index: number) => {
+      const availableAirbears = airbears.filter(r => r.currentSpotId === spot.id && r.isAvailable);
+      const hasAirbears = availableAirbears.length > 0;
+      
+      if (hasAirbears) {
+        const latitude = Number(spot.latitude);
+        const longitude = Number(spot.longitude);
+        
+        // Find the marker for this spot and add click handler
+        map.eachLayer((layer: any) => {
+          if (layer instanceof window.L.Marker) {
+            const pos = layer.getLatLng();
+            if (Math.abs(pos.lat - latitude) < 0.0001 && Math.abs(pos.lng - longitude) < 0.0001) {
+              layer.on('click', () => {
+                setSelectedSpot(spot);
+                setShowBookingDialog(true);
+              });
+            }
+          }
+        });
       }
-    };
-
+    });
   }, [activeSpots, airbears, mapReady]);
+
+  // Add CSS for beautiful colorful Binghamton map styling
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      /* Vibrant Binghamton-themed map styling */
+      .beautiful-map {
+        filter: saturate(1.4) contrast(1.15) brightness(1.08);
+      }
+
+      .leaflet-container {
+        background: linear-gradient(135deg, #10b981 0%, #3b82f6 50%, #8b5cf6 100%);
+        font-family: 'Inter', system-ui, sans-serif;
+      }
+
+      .leaflet-tile-pane {
+        filter: hue-rotate(5deg) saturate(1.4);
+      }
+
+      /* Custom zoom controls */
+      .leaflet-control-zoom a {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        color: white !important;
+        border: none !important;
+        font-weight: bold;
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+      }
+
+      .leaflet-control-zoom a:hover {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+        transform: scale(1.05);
+      }
+
+      /* Binghamton colors - Green and Gold */
+      .binghamton-green { color: #10b981; }
+      .binghamton-gold { color: #f59e0b; }
+
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.15); opacity: 0.85; }
+      }
+
+      @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-5px); }
+      }
+
+      @keyframes glow {
+        0%, 100% { box-shadow: 0 0 5px rgba(16, 185, 129, 0.5); }
+        50% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.8), 0 0 30px rgba(59, 130, 246, 0.6); }
+      }
+
+      @keyframes driver-move {
+        0% { transform: translateX(-2px) rotate(-2deg); }
+        50% { transform: translateX(2px) rotate(2deg); }
+        100% { transform: translateX(-2px) rotate(-2deg); }
+      }
+
+      .animate-pulse {
+        animation: pulse 2s infinite;
+      }
+
+      .animate-float {
+        animation: float 3s ease-in-out infinite;
+      }
+
+      .animate-glow {
+        animation: glow 2s ease-in-out infinite;
+      }
+
+      .driver-marker {
+        animation: driver-move 1.5s ease-in-out infinite;
+      }
+
+      /* Attribution styling */
+      .leaflet-control-attribution {
+        background: rgba(255, 255, 255, 0.9) !important;
+        backdrop-filter: blur(10px);
+        border-radius: 8px;
+        padding: 4px 8px;
+        font-size: 10px;
+      }
+
+      /* Popup styling */
+      .leaflet-popup-content-wrapper {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(15px);
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(16, 185, 129, 0.2);
+      }
+
+      .leaflet-popup-tip {
+        background: rgba(255, 255, 255, 0.95);
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
 
   const handleBookRide = async () => {
     if (!selectedSpot || !selectedDestination) {
@@ -518,7 +731,7 @@ export default function Map() {
     }
 
     const distance = calculateDistanceKm(selectedSpot, selectedDestination) || 0;
-    const fare = estimateRideFare(distance);
+    const fare = 4.00; // Flat fee
 
     try {
       const response = await fetch('/api/rides', {
@@ -544,13 +757,18 @@ export default function Map() {
       const rideData = await response.json();
 
       toast({
-        title: "🎉 Ride Booked!",
-        description: `Your AirBear ride from ${selectedSpot.name} to ${selectedDestination.name} has been placed. Cost: $${fare.toFixed(2)}.`,
+        title: "🎉 Ride Booked Successfully!",
+        description: `Your AirBear is on the way! Ride from ${selectedSpot.name} to ${selectedDestination.name}. Fare: $${fare.toFixed(2)}`,
       });
 
       setShowBookingDialog(false);
       setSelectedSpot(null);
       setSelectedDestination(null);
+
+      // Navigate to checkout to complete payment
+      if (rideData.id) {
+        window.location.href = `/checkout?rideId=${rideData.id}&amount=${fare}`;
+      }
     } catch (err: any) {
       console.error("Booking error:", err);
       toast({
@@ -566,10 +784,6 @@ export default function Map() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <LoadingSpinner size="lg" text="Loading map..." />
-          <p className="mt-4 text-muted-foreground flex items-center justify-center gap-2">
-            <AirbearAvatar size="sm" showBadge={false} />
-            Setting up your AirBear adventure...
-          </p>
         </div>
       </div>
     );
@@ -578,49 +792,86 @@ export default function Map() {
   return (
     <div className="min-h-screen py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
+        {/* Header with Binghamton Branding */}
         <motion.div
           className="text-center mb-8"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
+          <div className="inline-flex items-center justify-center mb-4 px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500/20 to-blue-500/20 border border-emerald-500/30">
+            <span className="text-2xl mr-2">🐻</span>
+            <span className="text-sm font-semibold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
+              BINGHAMTON, NY
+            </span>
+          </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-            Find Your <span className="text-primary">Perfect Ride</span>
+            Find Your <span className="bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500 bg-clip-text text-transparent">Perfect Ride</span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Discover all {activeSpots.length} AirBear spots across Binghamton with real-time availability
+            Discover all <span className="font-bold text-emerald-600">{activeSpots.length}</span> AirBear spots across the Greater Binghamton area with real-time driver tracking
           </p>
         </motion.div>
 
-        {/* Status Info */}
+        {/* Live Status Dashboard */}
         <motion.div
-          className="mb-6 p-4 bg-gradient-to-r from-emerald-50 to-lime-50 rounded-lg border border-emerald-200"
+          className="mb-6 p-5 bg-gradient-to-r from-emerald-50 via-blue-50 to-purple-50 dark:from-emerald-950/30 dark:via-blue-950/30 dark:to-purple-950/30 rounded-2xl border border-emerald-200/50 dark:border-emerald-800/30 shadow-lg"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center space-x-2">
-              <AirbearAvatar size="sm" className="text-primary" />
-              <span className="font-semibold text-emerald-700">Live Map Status</span>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center space-x-3">
+              <div className="relative">
+                <AirbearAvatar size="sm" className="text-primary" />
+                <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-ping"></span>
+                <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full"></span>
+              </div>
+              <div>
+                <span className="font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">Live Fleet Status</span>
+                <p className="text-xs text-muted-foreground">Real-time driver tracking</p>
+              </div>
             </div>
-            <div className="hidden sm:flex items-center space-x-4 text-sm text-emerald-600">
-              <span>🟢 {availableAirbearsCount} AirBears Available</span>
-              <span>📍 {activeSpots.length} Active Spots</span>
-              <span>🌱 100% Solar Powered</span>
+            <div className="flex items-center space-x-6 text-sm">
+              <div className="flex items-center space-x-3 bg-white/60 dark:bg-gray-800/60 rounded-xl px-4 py-2 shadow-sm">
+                <div className="relative">
+                  <div className="w-5 h-5 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full animate-pulse shadow-lg shadow-green-500/50"></div>
+                  <div className="absolute inset-0 w-5 h-5 bg-green-400 rounded-full animate-ping opacity-30"></div>
+                </div>
+                <div>
+                  <div className="font-bold text-lg text-green-600">{availableAirbearsCount}</div>
+                  <div className="text-xs text-muted-foreground">Available Now</div>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3 bg-white/60 dark:bg-gray-800/60 rounded-xl px-4 py-2 shadow-sm">
+                <div className="w-5 h-5 bg-gradient-to-br from-amber-400 to-orange-600 rounded-full animate-pulse shadow-lg shadow-amber-500/50"></div>
+                <div>
+                  <div className="font-bold text-lg text-amber-600">{airbears.filter(r => !r.isAvailable && !r.isCharging).length}</div>
+                  <div className="text-xs text-muted-foreground">En Route</div>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3 bg-white/60 dark:bg-gray-800/60 rounded-xl px-4 py-2 shadow-sm">
+                <div className="w-5 h-5 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-full shadow-lg shadow-blue-500/50 flex items-center justify-center">
+                  <span className="text-white text-xs">⚡</span>
+                </div>
+                <div>
+                  <div className="font-bold text-lg text-blue-600">{airbears.filter(r => r.isCharging).length}</div>
+                  <div className="text-xs text-muted-foreground">Charging</div>
+                </div>
+              </div>
             </div>
           </div>
         </motion.div>
 
         {/* Map Container */}
         <motion.div
-          className="bg-card rounded-2xl p-6 shadow-2xl mb-8 relative overflow-hidden"
+          className="mb-8"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          <div className="aspect-video rounded-xl overflow-hidden relative shadow-inner">
+          <div className="aspect-video rounded-2xl overflow-hidden relative shadow-2xl border-4 border-gradient-to-r from-emerald-500 via-blue-500 to-purple-500" style={{borderImage: 'linear-gradient(135deg, #10b981, #3b82f6, #8b5cf6) 1'}}>
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 pointer-events-none z-10 rounded-2xl"></div>
             <div
               ref={mapRef}
               className="w-full h-full rounded-xl"
@@ -662,6 +913,10 @@ export default function Map() {
               <span className="font-medium">Available AirBear</span>
             </div>
             <div className="flex items-center space-x-3 bg-card/50 rounded-lg px-4 py-2 border">
+              <div className="w-4 h-4 bg-amber-500 rounded-full"></div>
+              <span className="font-medium">Merchandise Drop-off</span>
+            </div>
+            <div className="flex items-center space-x-3 bg-card/50 rounded-lg px-4 py-2 border">
               <div className="w-4 h-4 bg-gray-400 rounded-full"></div>
               <span className="font-medium">No Availability</span>
             </div>
@@ -700,53 +955,52 @@ export default function Map() {
                       setShowBookingDialog(true);
                     }
                   }}
-                  data-testid={`card-spot-${spot.name.toLowerCase().replace(/\s+/g, '-')}`}
                 >
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center justify-between">
-                      <span className="truncate">{spot.name}</span>
-                      <AirbearAvatar
-                        size="sm"
-                        className={availableAirbears.length > 0 ? "text-primary" : "text-muted-foreground"}
-                      />
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Available</span>
-                      <Badge
-                        variant={availableAirbears.length > 0 ? "default" : "secondary"}
-                        className={availableAirbears.length > 0 ? "bg-green-500" : ""}
-                      >
-                        {availableAirbears.length} AirBear{availableAirbears.length !== 1 ? 's' : ''}
-                      </Badge>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-2">
+                        <div className={`
+                          w-3 h-3 rounded-full
+                          ${availableAirbears.length > 0 ? 'bg-green-500' : 'bg-gray-400'}
+                        `}></div>
+                        <h3 className="font-semibold text-sm">{spot.name}</h3>
+                      </div>
+                      {spot.id === 'downtown-station' && (
+                        <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full">
+                          📦 Merchandise
+                        </span>
+                      )}
                     </div>
-
-                    {availableAirbears.length > 0 && (
-                      <>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Avg Battery</span>
-                          <div className="flex items-center space-x-2">
-                            <Battery className="h-4 w-4 text-green-500" />
-                            <span className="text-sm font-medium">{avgBattery}%</span>
-                          </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span>Available AirBears:</span>
+                        <span className={`font-semibold ${availableAirbears.length > 0 ? 'text-green-600' : 'text-gray-500'}`}>
+                          {availableAirbears.length}
+                        </span>
+                      </div>
+                      
+                      {availableAirbears.length > 0 && (
+                        <div className="flex justify-between text-xs">
+                          <span>Avg Battery:</span>
+                          <span className={`font-semibold ${
+                            avgBattery > 50 ? 'text-green-600' : 
+                            avgBattery > 20 ? 'text-amber-600' : 'text-red-600'
+                          }`}>
+                            {avgBattery}%
+                          </span>
                         </div>
-
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Wait Time</span>
-                          <div className="flex items-center space-x-2">
-                            <Clock className="h-4 w-4 text-amber-500" />
-                            <span className="text-sm font-medium">~2 min</span>
-                          </div>
-                        </div>
-                      </>
-                    )}
+                      )}
+                    </div>
 
                     <Button
                       size="sm"
-                      className="w-full eco-gradient text-white"
+                      className={`w-full mt-3 ${
+                        availableAirbears.length > 0 
+                          ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700' 
+                          : 'bg-gray-300 cursor-not-allowed'
+                      }`}
                       disabled={availableAirbears.length === 0}
-                      data-testid={`button-book-from-${spot.name.toLowerCase().replace(/\s+/g, '-')}`}
                     >
                       {availableAirbears.length > 0 ? "Book Ride" : "No AirBears"}
                     </Button>
@@ -763,7 +1017,7 @@ export default function Map() {
             <DialogHeader>
               <DialogTitle className="flex items-center">
                 <AirbearAvatar size="sm" className="mr-2" />
-                Book Your Ride (Demo)
+                <span className="bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">Book Your AirBear Ride</span>
               </DialogTitle>
             </DialogHeader>
 
@@ -808,7 +1062,7 @@ export default function Map() {
                   {(() => {
                     const distance = selectedSpot ? calculateDistanceKm(selectedSpot, selectedDestination) : null;
                     const time = distance ? estimateRideTime(distance) : 0;
-                    const fare = distance ? estimateRideFare(distance) : 0;
+                    const fare = 4.00; // Flat fee
                     return (
                       <>
                         <div className="flex justify-between text-sm">
@@ -836,10 +1090,10 @@ export default function Map() {
               <Button
                 onClick={handleBookRide}
                 disabled={!selectedDestination}
-                className="w-full eco-gradient text-white hover-lift"
+                className="w-full bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500 text-white hover:from-emerald-600 hover:via-blue-600 hover:to-purple-600 hover-lift shadow-lg"
                 data-testid="button-confirm-booking"
               >
-                Confirm Booking (Demo)
+                🚀 Book & Pay Now
               </Button>
             </div>
           </DialogContent>

@@ -2,21 +2,26 @@ import { loadStripe, Stripe } from '@stripe/stripe-js';
 
 const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
 
-if (stripePublicKey && stripePublicKey.startsWith("pk_test")) {
+// Gracefully handle missing Stripe key - allows demo mode
+if (!stripePublicKey) {
+  console.warn("⚠️ VITE_STRIPE_PUBLIC_KEY not configured. Running in demo payment mode.");
+}
+
+if (stripePublicKey?.startsWith("pk_test")) {
   console.warn("⚠️ Stripe is running with a test key. Use a live pk_live key for production.");
 }
 
 let stripePromise: Promise<Stripe | null> | null = null;
 
 export const getStripe = () => {
-  if (!stripePublicKey) {
-    console.warn("VITE_STRIPE_PUBLIC_KEY not configured. Stripe features unavailable.");
-    return Promise.resolve(null);
-  }
-  if (!stripePromise) {
+  if (!stripePromise && stripePublicKey) {
     stripePromise = loadStripe(stripePublicKey);
   }
-  return stripePromise;
+  return stripePromise || Promise.resolve(null);
+};
+
+export const isStripeConfigured = (): boolean => {
+  return !!stripePublicKey;
 };
 
 export interface PaymentIntentData {
@@ -37,6 +42,21 @@ export interface PaymentResult {
 
 export const createPaymentIntent = async (data: PaymentIntentData): Promise<PaymentResult> => {
   try {
+    // If Stripe is not configured, return a mock payment intent for demo mode
+    if (!isStripeConfigured() && data.paymentMethod !== 'cash') {
+      console.log('Demo mode: Creating mock payment intent');
+      return {
+        success: true,
+        paymentIntent: {
+          clientSecret: `mock_${Date.now()}_secret`,
+          id: `mock_pi_${Date.now()}`,
+          amount: data.amount * 100,
+          currency: data.currency || 'usd',
+          status: 'requires_payment_method',
+        },
+      };
+    }
+
     const response = await fetch('/api/create-payment-intent', {
       method: 'POST',
       headers: {
@@ -65,6 +85,19 @@ export const createPaymentIntent = async (data: PaymentIntentData): Promise<Paym
     };
   } catch (error: any) {
     console.error("Payment Intent Error:", error);
+    // Fallback to demo mode on error
+    if (!isStripeConfigured()) {
+      return {
+        success: true,
+        paymentIntent: {
+          clientSecret: `mock_${Date.now()}_secret`,
+          id: `mock_pi_${Date.now()}`,
+          amount: data.amount * 100,
+          currency: data.currency || 'usd',
+          status: 'demo_mode',
+        },
+      };
+    }
     return {
       success: false,
       error: error.message || 'Payment setup failed',

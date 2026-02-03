@@ -74,25 +74,16 @@ export default function Header() {
           <nav className="hidden md:flex items-center space-x-8">
             {navigation.map((item) => (
               <Link key={item.name} to={item.href}>
-                <motion.a
-                  className={`text-foreground/80 hover:text-primary transition-colors hover-lift flex items-center space-x-2 ${
-                    isActive(item.href) ? "text-primary font-medium" : ""
+                <motion.div
+                  className={`text-foreground/80 hover:text-primary transition-colors hover-lift flex items-center space-x-2 cursor-pointer ${
+                    isActive(item.href) ? "text-primary font-semibold" : ""
                   }`}
-                  whileHover={{ y: -2 }}
-                  data-testid={`link-nav-${item.name.toLowerCase()}`}
-                  onClick={(e) => {
-                    if ('scrollTo' in item) {
-                      e.preventDefault();
-                      const element = document.getElementById((item as any).scrollTo);
-                      if (element) {
-                        element.scrollIntoView({ behavior: 'smooth' });
-                      }
-                    }
-                  }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   <item.Icon className="h-4 w-4" />
                   <span>{item.name}</span>
-                </motion.a>
+                </motion.div>
               </Link>
             ))}
           </nav>

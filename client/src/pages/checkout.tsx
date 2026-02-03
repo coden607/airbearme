@@ -115,19 +115,83 @@ export default function Checkout() {
   const [qrCode, setQrCode] = useState("");
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [walletLoading, setWalletLoading] = useState({ apple: false, google: false });
+  const [orderData, setOrderData] = useState({
+    orderId: "",
+    rideId: "",
+    items: [] as { name: string; price: number; quantity: number }[],
+    subtotal: 0,
+    tax: 0,
+    total: 0,
+    isRide: false,
+  });
 
-  // Sample order data - in real app this would come from cart/order context
-  const orderData = {
-    orderId: "order_123",
-    rideId: "ride_456",
-    items: [
-      { name: "Local Coffee Blend", price: 12.99, quantity: 1 },
-      { name: "Fresh Produce Box", price: 24.99, quantity: 1 },
-    ],
-    subtotal: 37.98,
-    tax: 3.04,
-    total: 41.02,
-  };
+  // Parse URL parameters for ride booking or bodega checkout
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const rideId = urlParams.get('rideId');
+    const amount = parseFloat(urlParams.get('amount') || '0');
+    const orderId = urlParams.get('orderId');
+
+    if (rideId && amount > 0) {
+      // Coming from ride booking
+      const tax = amount * 0.08;
+      setOrderData({
+        orderId: orderId || `order_${Date.now()}`,
+        rideId: rideId,
+        items: [{ name: "AirBear Ride - Binghamton", price: amount, quantity: 1 }],
+        subtotal: amount,
+        tax: Math.round(tax * 100) / 100,
+        total: Math.round((amount + tax) * 100) / 100,
+        isRide: true,
+      });
+    } else if (orderId) {
+      // Coming from bodega checkout - fetch order details
+      fetch(`/api/orders/${orderId}`)
+        .then(res => res.json())
+        .then(order => {
+          if (order && order.items) {
+            const subtotal = parseFloat(order.totalAmount) || 0;
+            const tax = subtotal * 0.08;
+            setOrderData({
+              orderId: order.id,
+              rideId: order.rideId || "",
+              items: order.items.map((item: any) => ({
+                name: item.name || `Item ${item.itemId}`,
+                price: parseFloat(item.price) || 0,
+                quantity: item.quantity || 1,
+              })),
+              subtotal,
+              tax: Math.round(tax * 100) / 100,
+              total: Math.round((subtotal + tax) * 100) / 100,
+              isRide: false,
+            });
+          }
+        })
+        .catch(() => {
+          // Fallback to demo data
+          setOrderData({
+            orderId: "demo_order",
+            rideId: "",
+            items: [{ name: "Demo Purchase", price: 4.00, quantity: 1 }],
+            subtotal: 4.00,
+            tax: 0.32,
+            total: 4.32,
+            isRide: false,
+          });
+        });
+    } else {
+      // Default demo data
+      setOrderData({
+        orderId: `demo_${Date.now()}`,
+        rideId: "",
+        items: [{ name: "AirBear Ride", price: 4.00, quantity: 1 }],
+        subtotal: 4.00,
+        tax: 0.32,
+        total: 4.32,
+        isRide: true,
+      });
+    }
+  }, []);
 
   const createPaymentIntentMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -176,8 +240,8 @@ export default function Checkout() {
   }, []);
 
   useEffect(() => {
-    // Initialize payment intent when method changes, ONLY if not already provided via URL
-    if (orderData.total > 0 && !clientSecret) {
+    // Initialize payment intent when method changes and orderData is ready
+    if (orderData.total > 0 && !clientSecret && orderData.orderId) {
       createPaymentIntentMutation.mutate({
         amount: orderData.total,
         orderId: orderData.orderId,
@@ -186,7 +250,7 @@ export default function Checkout() {
         paymentMethod,
       });
     }
-  }, [paymentMethod, clientSecret]);
+  }, [paymentMethod, clientSecret, orderData.total, orderData.orderId]);
 
   const handlePaymentSuccess = () => {
     setPaymentSuccess(true);
@@ -342,11 +406,21 @@ export default function Checkout() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
+          <div className="inline-flex items-center justify-center mb-4 px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500/20 to-blue-500/20 border border-emerald-500/30">
+            <span className="text-2xl mr-2">{orderData.isRide ? '🚗' : '🛍️'}</span>
+            <span className="text-sm font-semibold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
+              {orderData.isRide ? 'RIDE PAYMENT' : 'BODEGA CHECKOUT'}
+            </span>
+          </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-            Checkout
+            <span className="bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500 bg-clip-text text-transparent">
+              Complete Your {orderData.isRide ? 'Ride' : 'Order'}
+            </span>
           </h1>
           <p className="text-lg text-muted-foreground">
-            Complete your order for pickup during your next ride
+            {orderData.isRide
+              ? 'Secure payment for your AirBear ride in Binghamton'
+              : 'Complete your order for pickup during your next ride'}
           </p>
         </motion.div>
 

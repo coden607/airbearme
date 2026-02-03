@@ -67,13 +67,17 @@ export default function Bodega() {
       const response = await apiRequest("POST", "/api/orders", orderData);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (order) => {
       toast({
-        title: "Order Placed!",
-        description: "Your order will be ready for pickup during your next ride.",
+        title: "🛍️ Order Created!",
+        description: "Redirecting to payment...",
       });
       setCart([]);
       setShowCart(false);
+
+      // Redirect to checkout with order details
+      const totalAmount = order.totalAmount || getTotalPrice();
+      window.location.href = `/checkout?orderId=${order.id}&amount=${totalAmount}`;
     },
     onError: (error: any) => {
       toast({
@@ -484,27 +488,27 @@ export default function Bodega() {
                     </div>
                     
                     {user ? (
-                      <Button 
+                      <Button
                         onClick={handleCheckout}
                         disabled={createOrderMutation.isPending}
-                        className="w-full eco-gradient text-white hover-lift animate-pulse-glow"
+                        className="w-full bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500 text-white hover:from-emerald-600 hover:via-blue-600 hover:to-purple-600 hover-lift shadow-lg"
                         data-testid="button-checkout"
                       >
                         {createOrderMutation.isPending ? (
-                          <div className="flex items-center">
+                          <div className="flex items-center justify-center">
                             <AirbearWheel size="sm" className="mr-2" />
-                            Placing Order...
+                            Creating Order...
                           </div>
                         ) : (
-                          <div className="flex items-center">
-                            <AirbearWheel size="sm" className="mr-2" />
-                            Checkout on Arrival
+                          <div className="flex items-center justify-center">
+                            <Sparkles className="mr-2 h-4 w-4" />
+                            Proceed to Payment - ${getTotalPrice().toFixed(2)}
                           </div>
                         )}
                       </Button>
                     ) : (
                       <Link to="/auth">
-                        <Button className="w-full eco-gradient text-white" data-testid="button-sign-in-to-checkout">
+                        <Button className="w-full bg-gradient-to-r from-emerald-500 to-blue-500 text-white" data-testid="button-sign-in-to-checkout">
                           Sign In to Checkout
                         </Button>
                       </Link>

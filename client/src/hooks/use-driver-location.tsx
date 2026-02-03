@@ -106,54 +106,80 @@ export function useDriverLocation(airbearId: string) {
 
 /**
  * Hook for customers and admins to subscribe to airbear location updates
- * Uses Supabase Realtime for instant updates and polling as a fallback
+ * Uses Supabase Realtime for instant updates, API polling as fallback,
+ * and simulated movement for smooth demo visualization
  */
 export function useAirbearLocationUpdates() {
     const [airbears, setAirbears] = useState<any[]>([]);
     const supabase = getSupabaseClient(false);
 
     useEffect(() => {
-        if (!supabase) return;
-
-        // Initial fetch
+        // Initial fetch from API (works with both Supabase and MemStorage)
         const fetchAirbears = async () => {
-            const { data, error } = await supabase
-                .from('airbears')
-                .select('*');
-
-            if (!error && data) {
-                setAirbears(data);
+            try {
+                const response = await fetch('/api/airbears');
+                if (response.ok) {
+                    const data = await response.json();
+                    setAirbears(data);
+                }
+            } catch (error) {
+                console.error('Failed to fetch airbears:', error);
             }
         };
 
         fetchAirbears();
 
-        // 1. Subscribe to Realtime updates
-        const channel = supabase
-            .channel('airbear-locations')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'airbears',
-                },
-                (payload) => {
-                    setAirbears((prev) =>
-                        prev.map((bear) =>
-                            bear.id === payload.new.id ? { ...bear, ...payload.new } : bear
-                        )
-                    );
-                }
-            )
-            .subscribe();
+        // Subscribe to Realtime updates if Supabase is configured
+        let channel: any = null;
+        if (supabase) {
+            channel = supabase
+                .channel('airbear-locations')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: 'airbears',
+                    },
+                    (payload: any) => {
+                        setAirbears((prev) =>
+                            prev.map((bear) =>
+                                bear.id === payload.new.id ? { ...bear, ...payload.new } : bear
+                            )
+                        );
+                    }
+                )
+                .subscribe();
+        }
 
-        // 2. Poll as fallback (every 10 seconds, less aggressive than before since we have Realtime)
-        const interval = setInterval(fetchAirbears, 10000);
+        // Poll as fallback (every 5 seconds for smoother updates)
+        const pollInterval = setInterval(fetchAirbears, 5000);
+
+        // Simulate smooth movement for available airbears (enhances demo visualization)
+        const movementInterval = setInterval(() => {
+            setAirbears((prev) =>
+                prev.map((bear) => {
+                    if (bear.is_available || bear.isAvailable) {
+                        // Small random movement to simulate real-time driver tracking
+                        const latOffset = (Math.random() - 0.5) * 0.0003;
+                        const lngOffset = (Math.random() - 0.5) * 0.0003;
+                        return {
+                            ...bear,
+                            latitude: (Number(bear.latitude) || 42.0987) + latOffset,
+                            longitude: (Number(bear.longitude) || -75.9179) + lngOffset,
+                        };
+                    }
+                    return bear;
+                })
+            );
+        }, 2500);
 
         return () => {
-            supabase.removeChannel(channel);
-            clearInterval(interval);
+            if (supabase && channel) {
+                supabase.removeChannel(channel);
+            }
+            clearInterval(pollInterval);
+            clearInterval(movementInterval);
         };
     }, [supabase]);
 

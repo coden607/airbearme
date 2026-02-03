@@ -87,6 +87,7 @@ interface IStorage {
   updateBodegaItem(id: string, updates: Partial<BodegaItem>): Promise<BodegaItem>;
 
   // Orders
+  getOrderById(id: string): Promise<Order | undefined>;
   getOrdersByUser(userId: string): Promise<Order[]>;
   createOrder(order: InsertOrder): Promise<Order>;
   updateOrder(id: string, updates: Partial<Order>): Promise<Order>;
@@ -111,11 +112,25 @@ class MemStorage implements IStorage {
   private payments = new Map<string, Payment>();
 
   constructor() {
-    // Pre-seed with some data for development
+    // Pre-seed with Binghamton spots for development
     const spotsData: InsertSpot[] = [
       { name: 'Court Street Downtown', latitude: '42.099118', longitude: '-75.917538' },
       { name: 'Riverwalk BU Center', latitude: '42.098765', longitude: '-75.916543' },
       { name: 'Confluence Park', latitude: '42.090123', longitude: '-75.912345' },
+      { name: 'Southside Walking Bridge', latitude: '42.091409', longitude: '-75.914568' },
+      { name: 'General Hospital', latitude: '42.086741', longitude: '-75.915711' },
+      { name: 'McArthur Park', latitude: '42.086165', longitude: '-75.926153' },
+      { name: 'Greenway Path', latitude: '42.086678', longitude: '-75.932483' },
+      { name: 'Vestal Center', latitude: '42.091851', longitude: '-75.951729' },
+      { name: 'Innovation Park', latitude: '42.093877', longitude: '-75.958331' },
+      { name: 'BU East Gym', latitude: '42.091695', longitude: '-75.963590' },
+      { name: 'BU Fine Arts Building', latitude: '42.089282', longitude: '-75.967441' },
+      { name: 'Whitney Hall', latitude: '42.088456', longitude: '-75.965432' },
+      { name: 'Student Union', latitude: '42.086903', longitude: '-75.966704' },
+      { name: 'Appalachian Dining', latitude: '42.084523', longitude: '-75.971264' },
+      { name: 'Hinman Dining Hall', latitude: '42.086314', longitude: '-75.973292' },
+      { name: 'BU Science Building', latitude: '42.090227', longitude: '-75.972315' },
+      { name: 'Downtown Station', latitude: '42.101234', longitude: '-75.915678' },
     ];
     spotsData.forEach(spot => this.createSpot(spot));
 
@@ -232,20 +247,36 @@ class MemStorage implements IStorage {
     ];
     bodegaItems.forEach(item => this.createBodegaItem(item));
 
-    // Pre-seed an airbear for testing
-    const firstSpot = Array.from(this.spots.values())[0];
-    if (firstSpot) {
-      this.createAirbear({
-        driverId: null,
-        currentSpotId: firstSpot.id,
-        latitude: '42.099118',
-        longitude: '-75.917538',
-        batteryLevel: 85,
-        isAvailable: true,
-        isCharging: false,
-        maintenanceStatus: 'good'
-      });
-    }
+    // Pre-seed airbears across Binghamton for rich demo experience
+    const spotsList = Array.from(this.spots.values());
+    const airbearConfigs = [
+      { spotIndex: 0, battery: 92, available: true, charging: false },
+      { spotIndex: 1, battery: 78, available: true, charging: false },
+      { spotIndex: 2, battery: 65, available: true, charging: false },
+      { spotIndex: 3, battery: 45, available: false, charging: true },
+      { spotIndex: 5, battery: 88, available: true, charging: false },
+      { spotIndex: 7, battery: 72, available: true, charging: false },
+      { spotIndex: 9, battery: 35, available: false, charging: true },
+      { spotIndex: 10, battery: 95, available: true, charging: false },
+      { spotIndex: 12, battery: 82, available: true, charging: false },
+      { spotIndex: 14, battery: 68, available: false, charging: false },
+    ];
+
+    airbearConfigs.forEach((config, idx) => {
+      const spot = spotsList[config.spotIndex];
+      if (spot) {
+        this.createAirbear({
+          driverId: null,
+          currentSpotId: spot.id,
+          latitude: String(Number(spot.latitude) + (Math.random() - 0.5) * 0.002),
+          longitude: String(Number(spot.longitude) + (Math.random() - 0.5) * 0.002),
+          batteryLevel: config.battery,
+          isAvailable: config.available,
+          isCharging: config.charging,
+          maintenanceStatus: 'good'
+        });
+      }
+    });
   }
 
   // Users
@@ -442,6 +473,10 @@ class MemStorage implements IStorage {
   }
 
   // Orders
+  async getOrderById(id: string): Promise<Order | undefined> {
+    return this.orders.get(id);
+  }
+
   async getOrdersByUser(userId: string): Promise<Order[]> {
     return Array.from(this.orders.values()).filter(o => o.userId === userId);
   }
@@ -664,6 +699,12 @@ class SupabaseStorage implements IStorage {
   }
 
   // Orders
+  async getOrderById(id: string): Promise<Order | undefined> {
+    const { data, error } = await this.supabase.from("orders").select("*").eq("id", id).maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ?? undefined;
+  }
+
   async getOrdersByUser(userId: string): Promise<Order[]> {
     const { data, error } = await this.supabase.from("orders").select("*").eq("user_id", userId).order("created_at", { ascending: false });
     return this.assert((data ?? []) as Order[], error);
@@ -704,7 +745,7 @@ const isUsingTestCredentials =
   supabaseUrl?.includes('test-project.supabase.co') ||
   supabaseServiceRoleKey?.includes('test-supabase-secret-key-for-development-only');
 
-// Also force MemStorage if USE_MOCK_DATABASE is explicitly set
+// Use MemStorage for development or when USE_MOCK_DATABASE is explicitly set
 const useMockDatabase = process.env.USE_MOCK_DATABASE === 'true' ||
                        process.env.NODE_ENV === "development" ||
                        process.env.VERCEL_ENV === 'development';
