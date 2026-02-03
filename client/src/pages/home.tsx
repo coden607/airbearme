@@ -281,7 +281,7 @@ export default function Home() {
                     100% Eco-Friendly
                   </h3>
                   <p className="text-muted-foreground text-center">
-                    Solar-powered rickshaws that produce zero emissions while reducing your carbon footprint
+                    Solar-powered AirBears that produce zero emissions while reducing your carbon footprint
                   </p>
                 </CardContent>
               </Card>

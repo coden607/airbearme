@@ -34,7 +34,7 @@ export default function Support() {
     },
     {
       question: "Are AirBears really 100% solar powered?",
-      answer: "Yes! All our rickshaws are powered entirely by solar energy, producing zero emissions and helping reduce Binghamton's carbon footprint."
+      answer: "Yes! All our AirBears are powered entirely by solar energy, producing zero emissions and helping reduce Binghamton's carbon footprint."
     },
     {
       question: "How do I earn Eco Points?",
@@ -46,7 +46,7 @@ export default function Support() {
     },
     {
       question: "How do I become an AirBear driver?",
-      answer: "Click 'Become a Driver' in the footer or contact us at drivers@airbear.com. We provide training, solar rickshaws, and competitive earnings."
+      answer: "Click 'Become a Driver' in the footer or contact us at drivers@airbear.com. We provide training, solar AirBears, and competitive earnings."
     },
     {
       question: "What payment methods do you accept?",

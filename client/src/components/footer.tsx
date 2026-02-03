@@ -41,7 +41,7 @@ export default function Footer() {
               />
               <div>
                 <h3 className="text-2xl font-bold">AirBear</h3>
-                <p className="text-emerald-200">Solar Rickshaw Revolution</p>
+                <p className="text-emerald-200">Solar Electric Revolution</p>
               </div>
             </div>
             
