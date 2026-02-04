@@ -1,7 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import { registerRoutes } from "./routes.js";
-import { setupVite, serveStatic, log } from "./vite.js";
+import { log } from "./utils.js";
 
 const app = express();
 app.use((req, res, next) => {
@@ -212,8 +212,10 @@ export async function createApp() {
   if (app.get("env") === "development") {
     const { createServer } = await import("http");
     server = createServer(app);
+    const { setupVite } = await import("./vite.js");
     await setupVite(app, server);
   } else {
+    const { serveStatic } = await import("./vite.js");
     serveStatic(app);
   }
 
