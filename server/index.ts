@@ -1,7 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import { registerRoutes } from "./routes.js";
-import { log } from "./utils.js";
+import { log, env } from "./utils.js";
 
 const app = express();
 app.use((req, res, next) => {
@@ -14,13 +14,6 @@ app.use((req, res, next) => {
   next();
 });
 
-process.on("unhandledRejection", (reason) => {
-  console.error("[UnhandledRejection]", reason);
-});
-
-process.on("uncaughtException", (error) => {
-  console.error("[UncaughtException]", error);
-});
 app.use(express.json({
   verify: (req: any, _res, buf) => {
     if (req.originalUrl.startsWith('/api/webhooks/stripe')) {
@@ -146,7 +139,7 @@ const prodCsp = {
 // Security middleware with CSP
 app.use(
   helmet({
-    contentSecurityPolicy: process.env.NODE_ENV === 'production' ? prodCsp : devCsp,
+    contentSecurityPolicy: env.NODE_ENV === 'production' ? prodCsp : devCsp,
     crossOriginEmbedderPolicy: false,
   })
 );
@@ -166,7 +159,7 @@ app.use((req, res, next) => {
 
     res.on("finish", () => {
       const duration = Date.now() - start;
-      const isProduction = process.env.NODE_ENV === "production";
+      const isProduction = env.NODE_ENV === "production";
       const isError = res.statusCode >= 400;
       const requestId = res.locals.requestId as string | undefined;
 

@@ -1,33 +1,10 @@
 import type { Express, Request } from "express";
-import Stripe from "stripe";
 import { storage } from "./storage.js";
 import { insertRideSchema, insertOrderSchema, insertPaymentSchema } from "../shared/schema.js";
 import { z } from "zod";
 import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
+import { env } from "./utils.js";
 
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-if (!stripeSecretKey) {
-  console.warn("⚠️ STRIPE_SECRET_KEY is not configured. Stripe functionality will be disabled.");
-}
-
-const stripe = stripeSecretKey ? new Stripe(stripeSecretKey, {}) : null;
-
-const getStripe = () => {
-  if (!stripe) {
-    throw new Error("Stripe is not configured. Set STRIPE_SECRET_KEY.");
-  }
-  return stripe;
-};
-
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabaseAdmin = supabaseUrl && supabaseServiceRoleKey
-  ? createSupabaseAdminClient(supabaseUrl, supabaseServiceRoleKey, { auth: { autoRefreshToken: false } })
-  : null;
-
-if (!supabaseAdmin) {
-  console.warn("⚠️ Supabase admin client not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY for live auth.");
-}
 
 const logRouteError = (req: Request, error: unknown) => {
   const requestId = req.get("x-request-id");
@@ -36,6 +13,28 @@ const logRouteError = (req: Request, error: unknown) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Express> {
+  const supabaseUrl = env.SUPABASE_URL;
+  const supabaseServiceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseAdmin = supabaseUrl && supabaseServiceRoleKey
+    ? createSupabaseAdminClient(supabaseUrl, supabaseServiceRoleKey, { auth: { autoRefreshToken: false } })
+    : null;
+
+  if (!supabaseAdmin) {
+    console.warn("⚠️ Supabase admin client not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY for live auth.");
+  }
+
+  const stripeSecretKey = env.STRIPE_SECRET_KEY;
+  const StripeMod = stripeSecretKey ? await import("stripe") : null;
+  const Stripe = StripeMod?.default || StripeMod;
+  const stripe = (stripeSecretKey && Stripe) ? new (Stripe as any)(stripeSecretKey, {}) : null;
+
+  const getStripe = () => {
+    if (!stripe) {
+      throw new Error("Stripe is not configured. Set STRIPE_SECRET_KEY.");
+    }
+    return stripe;
+  };
+
   // Health check
   app.get("/api/health", (_req, res) => {
     res.json({
@@ -564,7 +563,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   app.post("/api/webhooks/stripe", async (req, res) => {
     try {
       const sig = req.headers['stripe-signature'];
-      const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      const endpointSecret = env.STRIPE_WEBHOOK_SECRET;
 
       if (!sig || !endpointSecret) {
         return res.status(400).json({ message: "Missing signature or webhook secret" });

@@ -8,3 +8,5 @@ export function log(message: string, source = "express") {
 
   console.log(`${formattedTime} [${source}] ${message}`);
 }
+
+export const env = (globalThis as any).process?.env || {};

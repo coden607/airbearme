@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { env } from "./utils.js";
 import {
   User, InsertUser,
   Spot, InsertSpot,
@@ -736,8 +737,8 @@ class SupabaseStorage implements IStorage {
   }
 }
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = env.SUPABASE_URL;
+const supabaseServiceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
 
 // Force using MemStorage for development/testing when using test credentials
 const isUsingTestCredentials =
@@ -745,9 +746,9 @@ const isUsingTestCredentials =
   supabaseServiceRoleKey?.includes('test-supabase-secret-key-for-development-only');
 
 // Use MemStorage for development or when USE_MOCK_DATABASE is explicitly set
-const useMockDatabase = process.env.USE_MOCK_DATABASE === 'true' ||
-                       process.env.NODE_ENV === "development" ||
-                       process.env.VERCEL_ENV === 'development';
+const useMockDatabase = env.USE_MOCK_DATABASE === 'true' ||
+                       env.NODE_ENV === "development" ||
+                       env.VERCEL_ENV === 'development';
 
 export const storage: IStorage = !isUsingTestCredentials && !useMockDatabase && supabaseUrl && supabaseServiceRoleKey
   ? (() => {
