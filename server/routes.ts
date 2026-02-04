@@ -42,9 +42,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({
       status: "ok",
       timestamp: new Date().toISOString(),
-      supabaseUrl: supabaseUrl ? "configured" : "missing",
-      supabaseServiceRoleKey: supabaseServiceRoleKey ? "configured" : "missing",
-      stripeSecretKey: stripeSecretKey ? "configured" : "missing",
     });
   });
 
@@ -108,7 +105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: z.string().email(),
         username: z.string().min(2),
         fullName: z.string().optional().nullable(),
-        role: z.enum(["user", "driver", "admin"]).optional(),
+        role: z.enum(["user", "driver"]).optional(),
         avatarUrl: z.string().optional().nullable(),
         password: z.string().min(6),
       });
@@ -189,6 +186,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SECRET_KEY." });
       }
 
+      // Prevent privilege escalation by ignoring client-provided role
+      delete (req.body as any).role;
       const payload = profileSchema.parse(req.body);
       const profile = await ensureUserProfile(payload);
       res.json({ user: profile });
