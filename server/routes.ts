@@ -1,5 +1,4 @@
 import type { Express, Request } from "express";
-import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage.js";
 import { insertRideSchema, insertOrderSchema, insertPaymentSchema } from "../shared/schema.js";
@@ -36,7 +35,7 @@ const logRouteError = (req: Request, error: unknown) => {
   console.error(`${prefix}[RouteError] ${req.method} ${req.path}`, error);
 };
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express): Promise<Express> {
   // Health check
   app.get("/api/health", (_req, res) => {
     res.json({
@@ -770,6 +769,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
-  return httpServer;
+  return app;
 }

@@ -1,7 +1,5 @@
-import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
-import { randomUUID } from "crypto";
 import { registerRoutes } from "./routes.js";
 import { setupVite, serveStatic, log } from "./vite.js";
 
@@ -10,7 +8,7 @@ app.use((req, res, next) => {
   const incomingRequestId = req.get("x-request-id");
   const requestId = incomingRequestId && incomingRequestId.length < 128
     ? incomingRequestId
-    : randomUUID();
+    : (globalThis as any).crypto.randomUUID();
   res.locals.requestId = requestId;
   res.setHeader("x-request-id", requestId);
   next();
@@ -196,7 +194,7 @@ app.use((req, res, next) => {
 
 export async function createApp() {
   // Register API routes BEFORE Vite middleware
-  const server = await registerRoutes(app);
+  await registerRoutes(app);
 
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -210,28 +208,16 @@ export async function createApp() {
     res.status(status).json({ message });
   });
 
+  let server;
   if (app.get("env") === "development") {
+    const { createServer } = await import("http");
+    server = createServer(app);
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
   return { app, server };
-}
-
-// Only start the server if this file is run directly (not as a module)
-if (import.meta.url === `file://${process.argv[1]}` || process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
-  (async () => {
-    const { server } = await createApp();
-    const port = parseInt(process.env.PORT || '5000', 10);
-    server.listen({
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    }, () => {
-      log(`serving on port ${port}`);
-    });
-  })();
 }
 
 export default app;
