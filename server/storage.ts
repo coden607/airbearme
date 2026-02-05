@@ -306,6 +306,133 @@ class MemStorage implements IStorage {
         category: 'accessories',
         isEcoFriendly: true,
         stock: 25
+      },
+      // HIGH-DEMAND CONVENIENCE ITEMS
+      {
+        name: 'Phone Charger Cable',
+        description: 'Universal USB-C & Lightning cable - charge any phone',
+        price: '9.99',
+        imageUrl: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=400&h=400&fit=crop',
+        category: 'electronics',
+        isEcoFriendly: false,
+        stock: 50
+      },
+      {
+        name: 'Portable Power Bank',
+        description: '10,000mAh portable charger - full phone charge on the go',
+        price: '19.99',
+        imageUrl: 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?w=400&h=400&fit=crop',
+        category: 'electronics',
+        isEcoFriendly: false,
+        stock: 30
+      },
+      {
+        name: 'Wireless Earbuds',
+        description: 'Bluetooth earbuds with charging case - 4hr battery life',
+        price: '24.99',
+        imageUrl: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&h=400&fit=crop',
+        category: 'electronics',
+        isEcoFriendly: false,
+        stock: 20
+      },
+      {
+        name: 'Pain Relief Pack',
+        description: 'Ibuprofen 2-pack for headaches and minor pain',
+        price: '2.99',
+        imageUrl: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&h=400&fit=crop',
+        category: 'health',
+        isEcoFriendly: false,
+        stock: 100
+      },
+      {
+        name: 'Hand Sanitizer',
+        description: '2oz travel-size sanitizer - 70% alcohol, aloe-infused',
+        price: '2.49',
+        imageUrl: 'https://images.unsplash.com/photo-1584483766114-2cea6facdf57?w=400&h=400&fit=crop',
+        category: 'health',
+        isEcoFriendly: true,
+        stock: 75
+      },
+      {
+        name: 'Pocket Tissues',
+        description: 'Soft 3-ply tissues - 10 pack',
+        price: '1.49',
+        imageUrl: 'https://images.unsplash.com/photo-1584515933487-779824d29309?w=400&h=400&fit=crop',
+        category: 'health',
+        isEcoFriendly: true,
+        stock: 80
+      },
+      {
+        name: 'Fresh Mints',
+        description: 'Sugar-free peppermint breath fresheners',
+        price: '1.99',
+        imageUrl: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop',
+        category: 'snacks',
+        isEcoFriendly: true,
+        stock: 60
+      },
+      {
+        name: 'Energy Drink',
+        description: 'Natural caffeine boost - zero sugar, tropical flavor',
+        price: '3.99',
+        imageUrl: 'https://images.unsplash.com/photo-1527960471264-932f39eb5846?w=400&h=400&fit=crop',
+        category: 'beverages',
+        isEcoFriendly: false,
+        stock: 40
+      },
+      {
+        name: 'Classic Chips',
+        description: 'Kettle-cooked sea salt chips - single serve bag',
+        price: '2.25',
+        imageUrl: 'https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=400&h=400&fit=crop',
+        category: 'snacks',
+        isEcoFriendly: false,
+        stock: 55
+      },
+      {
+        name: 'Sunglasses',
+        description: 'UV400 protection polarized sunglasses - unisex style',
+        price: '12.99',
+        imageUrl: 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400&h=400&fit=crop',
+        category: 'accessories',
+        isEcoFriendly: false,
+        stock: 25
+      },
+      {
+        name: 'Lip Balm',
+        description: 'Natural beeswax lip balm with SPF 15',
+        price: '2.99',
+        imageUrl: 'https://images.unsplash.com/photo-1585652757141-8837d676f3e4?w=400&h=400&fit=crop',
+        category: 'health',
+        isEcoFriendly: true,
+        stock: 45
+      },
+      {
+        name: 'Compact Umbrella',
+        description: 'Pocket-size automatic umbrella - windproof design',
+        price: '14.99',
+        imageUrl: 'https://images.unsplash.com/photo-1534309466160-70b22cc6252c?w=400&h=400&fit=crop',
+        category: 'accessories',
+        isEcoFriendly: false,
+        stock: 20
+      },
+      {
+        name: 'Gummy Bears',
+        description: 'Organic fruit gummy bears - no artificial colors',
+        price: '2.75',
+        imageUrl: 'https://images.unsplash.com/photo-1582058091505-f87a2e55a40f?w=400&h=400&fit=crop',
+        category: 'snacks',
+        isEcoFriendly: true,
+        stock: 50
+      },
+      {
+        name: 'Bottled Water',
+        description: 'Pure spring water - 16.9oz recyclable bottle',
+        price: '1.50',
+        imageUrl: 'https://images.unsplash.com/photo-1564419320461-6870880221ad?w=400&h=400&fit=crop',
+        category: 'beverages',
+        isEcoFriendly: true,
+        stock: 100
       }
     ];
     bodegaItems.forEach(item => this.createBodegaItem(item));

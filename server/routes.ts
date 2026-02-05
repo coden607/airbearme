@@ -44,6 +44,29 @@ export async function registerRoutes(app: Express): Promise<Express> {
     });
   });
 
+  // Error and event logging endpoints
+  app.post("/api/logs/errors", (req, res) => {
+    const { errors } = req.body;
+    if (Array.isArray(errors)) {
+      errors.forEach((error: any) => {
+        console.error("[ClientError]", {
+          message: error.message,
+          url: error.url,
+          userId: error.userId,
+          timestamp: error.timestamp,
+          stack: error.stack?.substring(0, 500),
+        });
+      });
+    }
+    res.json({ received: true });
+  });
+
+  app.post("/api/logs/events", (req, res) => {
+    const { event, data, timestamp } = req.body;
+    console.log("[ClientEvent]", { event, data, timestamp });
+    res.json({ received: true });
+  });
+
   // Auth routes
   const profileSchema = z.object({
     id: z.string().optional(),
