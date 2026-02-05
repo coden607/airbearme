@@ -23,10 +23,80 @@ interface ActiveRide {
   createdAt?: string;
 }
 
+// Minimal Leaflet type definitions for CDN-loaded library
+interface LeafletMap {
+  setView(center: [number, number], zoom: number): LeafletMap;
+  remove(): void;
+  fitBounds(bounds: [[number, number], [number, number]], options?: { padding: [number, number] }): void;
+}
+
+interface LeafletMarker {
+  addTo(map: LeafletMap): LeafletMarker;
+  remove(): void;
+  setLatLng(latlng: [number, number]): LeafletMarker;
+  bindPopup(content: string): LeafletMarker;
+  on(event: string, handler: () => void): LeafletMarker;
+}
+
+interface LeafletPolyline {
+  addTo(map: LeafletMap): LeafletPolyline;
+  remove(): void;
+}
+
+interface LeafletIcon {
+  // Icon instance
+}
+
+interface LeafletStatic {
+  map(element: HTMLElement): LeafletMap;
+  tileLayer(url: string, options?: Record<string, unknown>): { addTo(map: LeafletMap): void };
+  marker(latlng: [number, number], options?: { icon?: LeafletIcon }): LeafletMarker;
+  polyline(latlngs: [number, number][], options?: { color?: string; weight?: number; opacity?: number; dashArray?: string }): LeafletPolyline;
+  divIcon(options: { html: string; className: string; iconSize: [number, number]; iconAnchor: [number, number] }): LeafletIcon;
+}
+
 declare global {
   interface Window {
-    L: any;
+    L: LeafletStatic;
   }
+}
+
+// API response types for type-safe mapping
+interface SpotApiResponse {
+  id: string;
+  name: string;
+  latitude: number | string;
+  longitude: number | string;
+  isActive?: boolean;
+  is_active?: boolean;
+  description?: string;
+}
+
+interface AirbearApiResponse {
+  id: string;
+  currentSpotId?: string;
+  current_spot_id?: string;
+  currentspotid?: string;
+  latitude?: number | string;
+  longitude?: number | string;
+  batteryLevel?: number;
+  battery_level?: number;
+  batterylevel?: number;
+  isAvailable?: boolean;
+  is_available?: boolean;
+  isavailable?: boolean;
+  isCharging?: boolean;
+  is_charging?: boolean;
+  ischarging?: boolean;
+}
+
+interface RideApiResponse {
+  id: string;
+  status: string;
+  airbearId?: string;
+  pickupSpotId?: string;
+  dropoffSpotId?: string;
+  fare?: string;
 }
 
 interface Spot {
@@ -52,9 +122,9 @@ export default function Map() {
   const { user } = useAuth();
   const { toast } = useToast();
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
-  const routeLineRef = useRef<any>(null);
+  const mapInstanceRef = useRef<LeafletMap | null>(null);
+  const markersRef = useRef<LeafletMarker[]>([]);
+  const routeLineRef = useRef<LeafletPolyline | null>(null);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
   const [selectedDestination, setSelectedDestination] = useState<Spot | null>(null);
   const [showBookingDialog, setShowBookingDialog] = useState(false);
@@ -94,7 +164,7 @@ export default function Map() {
         if (!response.ok) return null;
         const rides = await response.json();
         // Find the most recent active ride
-        const ride = rides.find((r: any) => ['pending', 'accepted', 'in_progress'].includes(r.status));
+        const ride = rides.find((r: RideApiResponse) => ['pending', 'accepted', 'in_progress'].includes(r.status));
         return ride || null;
       } catch {
         return null;
@@ -114,11 +184,11 @@ export default function Map() {
           return getActiveSpots();
         }
         const data = await response.json();
-        return data.map((spot: any) => ({
+        return data.map((spot: SpotApiResponse) => ({
           ...spot,
           latitude: Number(spot.latitude),
           longitude: Number(spot.longitude),
-          isActive: spot.isActive ?? true,
+          isActive: spot.isActive ?? spot.is_active ?? true,
         }));
       } catch {
         return getActiveSpots();
@@ -135,7 +205,7 @@ export default function Map() {
         const response = await fetch('/api/airbears');
         if (!response.ok) return [];
         const data = await response.json();
-        return data.map((item: any) => ({
+        return data.map((item: AirbearApiResponse) => ({
           id: item.id,
           currentSpotId: item.currentSpotId ?? item.current_spot_id ?? item.currentspotid ?? "",
           latitude: Number(item.latitude ?? 0),
@@ -157,7 +227,7 @@ export default function Map() {
 
   const airbears = useMemo(() => {
     if (realtimeAirbears.length > 0) {
-      return realtimeAirbears.map((item: any) => ({
+      return realtimeAirbears.map((item: AirbearApiResponse) => ({
         id: item.id,
         currentSpotId: item.currentSpotId ?? item.current_spot_id ?? "",
         latitude: Number(item.latitude ?? 0),
@@ -483,8 +553,9 @@ export default function Map() {
         // Use client-side navigation to preserve auth state
         window.location.href = `/checkout?rideId=${rideData.id}&amount=4`;
       }
-    } catch (err: any) {
-      toast({ title: "Booking Failed", description: err.message, variant: "destructive" });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      toast({ title: "Booking Failed", description: message, variant: "destructive" });
     }
   };
 

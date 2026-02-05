@@ -1,6 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { getSupabaseClient } from '@/lib/supabase-client';
+import type { RealtimeChannel, RealtimePostgresUpdatePayload } from '@supabase/supabase-js';
+
+interface AirbearRecord {
+    id: string;
+    latitude: number | string | null;
+    longitude: number | string | null;
+    heading?: number | string | null;
+    is_available?: boolean;
+    isAvailable?: boolean;
+    [key: string]: unknown;
+}
 
 interface DriverLocation {
     latitude: number;
@@ -73,9 +84,10 @@ export function useDriverLocation(airbearId: string) {
                             console.error('Failed to update airbear location:', updateError);
                             setError(updateError.message);
                         }
-                    } catch (err: any) {
+                    } catch (err) {
+                        const message = err instanceof Error ? err.message : 'Unknown error';
                         console.error('Location update error:', err);
-                        setError(err.message);
+                        setError(message);
                     }
                 },
                 (err) => {
@@ -130,7 +142,7 @@ export function useAirbearLocationUpdates() {
         fetchAirbears();
 
         // Subscribe to Realtime updates if Supabase is configured
-        let channel: any = null;
+        let channel: RealtimeChannel | null = null;
         if (supabase) {
             channel = supabase
                 .channel('airbear-locations')
@@ -141,7 +153,7 @@ export function useAirbearLocationUpdates() {
                         schema: 'public',
                         table: 'airbears',
                     },
-                    (payload: any) => {
+                    (payload: RealtimePostgresUpdatePayload<AirbearRecord>) => {
                         setAirbears((prev) =>
                             prev.map((bear) =>
                                 bear.id === payload.new.id ? { ...bear, ...payload.new } : bear
