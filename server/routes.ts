@@ -221,14 +221,16 @@ export async function registerRoutes(app: Express): Promise<Express> {
       // Try Supabase auth first if available
       if (supabaseAuth) {
         console.log(`[Auth] Trying Supabase auth for: ${email}`);
-        const { data, error } = await supabaseAuth.auth.signInWithPassword({ email, password });
+        try {
+          const { data, error } = await supabaseAuth.auth.signInWithPassword({ email, password });
 
-        if (error) {
-          console.log(`[Auth] Supabase auth failed: ${error.message}`);
-        }
+          if (error) {
+            console.log(`[Auth] Supabase auth failed: ${error.message}, code: ${error.status}, name: ${error.name}`);
+            console.log(`[Auth] Full error:`, JSON.stringify(error));
+          }
 
-        if (!error && data.user) {
-          console.log(`[Auth] Supabase auth success for: ${email}`);
+          if (!error && data.user) {
+            console.log(`[Auth] Supabase auth success for: ${email}`);
           const profile = await ensureUserProfile({
             email,
             username: (data.user.user_metadata?.username as string) || email.split("@")[0],
@@ -238,8 +240,11 @@ export async function registerRoutes(app: Express): Promise<Express> {
           });
           return res.json({ user: { id: profile.id, email: profile.email, username: profile.username, role: profile.role, ecoPoints: profile.ecoPoints, totalRides: profile.totalRides, co2Saved: profile.co2Saved } });
         }
+        } catch (supabaseError: any) {
+          console.error(`[Auth] Supabase auth exception:`, supabaseError);
+        }
       } else {
-        console.log(`[Auth] Supabase admin not configured, skipping Supabase auth`);
+        console.log(`[Auth] Supabase auth client not configured, skipping Supabase auth`);
       }
 
       // Fallback to local storage auth
