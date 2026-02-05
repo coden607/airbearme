@@ -5,16 +5,16 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { assertSupabase } from "@/lib/supabase-client";
+import { assertSupabase, supabase } from "@/lib/supabase-client";
 import AirbearWheel from "@/components/airbear-wheel";
 import { AirBearMascot } from "@/components/airbear-mascot";
 import LoadingSpinner from "@/components/loading-spinner";
-import { Eye, EyeOff, Mail, Lock, User, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, Loader2, ArrowLeft, CheckCircle } from "lucide-react";
 
 export default function Auth() {
   const [, navigate] = useLocation();
@@ -22,7 +22,11 @@ export default function Auth() {
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [mode, setMode] = useState<"signin" | "signup">("signin");
-  
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -30,9 +34,63 @@ export default function Auth() {
     username: "",
     role: "user" as "user" | "driver" | "admin",
   });
-  
+
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isAppleLoading, setIsAppleLoading] = useState(false);
+
+  // Handle password reset request
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!resetEmail || !resetEmail.includes("@")) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsResettingPassword(true);
+
+    try {
+      // Try Supabase password reset first
+      if (supabase) {
+        const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+          redirectTo: `${window.location.origin}/auth/reset-password`,
+        });
+
+        if (error) throw error;
+      } else {
+        // Fallback: Call our API endpoint
+        const response = await fetch('/api/auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: resetEmail }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.message || 'Failed to send reset email');
+        }
+      }
+
+      setResetEmailSent(true);
+      toast({
+        title: "Reset Email Sent",
+        description: "Check your inbox for password reset instructions",
+      });
+    } catch (error: any) {
+      console.error('Password reset error:', error);
+      toast({
+        title: "Reset Failed",
+        description: error.message || "Unable to send reset email. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
 
   // Get redirect URL from query params
   const getRedirectUrl = () => {
@@ -313,7 +371,10 @@ export default function Auth() {
                     variant="link"
                     className="text-primary hover:text-primary/80"
                     data-testid="button-forgot-password"
-                    onClick={() => alert('Password reset functionality coming soon! Please contact support@airbear.com for assistance.')}
+                    onClick={() => {
+                      setShowForgotPassword(true);
+                      setResetEmail(formData.email);
+                    }}
                   >
                     Forgot your password?
                   </Button>
@@ -475,6 +536,122 @@ export default function Auth() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Forgot Password Modal */}
+        {showForgotPassword && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+            >
+              <Card className="w-full max-w-md mx-4 glass-morphism shadow-2xl border-primary/20">
+                <CardHeader className="text-center pb-4">
+                  <div className="flex justify-center mb-4">
+                    <AirBearMascot size="xl" className="rounded-full border-2 border-primary/30" />
+                  </div>
+                  <CardTitle className="text-2xl">
+                    {resetEmailSent ? "Check Your Email" : "Reset Password"}
+                  </CardTitle>
+                  <CardDescription>
+                    {resetEmailSent
+                      ? "We've sent you a password reset link"
+                      : "Enter your email to receive reset instructions"
+                    }
+                  </CardDescription>
+                </CardHeader>
+
+                <CardContent className="space-y-4">
+                  {resetEmailSent ? (
+                    <div className="text-center space-y-4">
+                      <div className="w-16 h-16 mx-auto bg-emerald-500/20 rounded-full flex items-center justify-center">
+                        <CheckCircle className="w-8 h-8 text-emerald-500" />
+                      </div>
+                      <p className="text-muted-foreground">
+                        We sent a password reset link to <strong className="text-foreground">{resetEmail}</strong>
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Didn't receive the email? Check your spam folder or try again.
+                      </p>
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setResetEmailSent(false);
+                          }}
+                        >
+                          Try Different Email
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setShowForgotPassword(false);
+                            setResetEmailSent(false);
+                            setResetEmail("");
+                          }}
+                          className="eco-gradient text-white"
+                        >
+                          Back to Sign In
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleForgotPassword} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="reset-email" className="flex items-center">
+                          <Mail className="w-4 h-4 mr-2" />
+                          Email Address
+                        </Label>
+                        <Input
+                          id="reset-email"
+                          type="email"
+                          value={resetEmail}
+                          onChange={(e) => setResetEmail(e.target.value)}
+                          placeholder="your@email.com"
+                          required
+                          className="focus:ring-primary"
+                          autoFocus
+                        />
+                      </div>
+
+                      <Button
+                        type="submit"
+                        disabled={isResettingPassword}
+                        className="w-full eco-gradient text-white hover-lift"
+                      >
+                        {isResettingPassword ? (
+                          <div className="flex items-center">
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Sending Reset Link...
+                          </div>
+                        ) : (
+                          "Send Reset Link"
+                        )}
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => {
+                          setShowForgotPassword(false);
+                          setResetEmail("");
+                        }}
+                        className="w-full"
+                      >
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Back to Sign In
+                      </Button>
+                    </form>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          </motion.div>
+        )}
 
         {/* OAuth Section */}
         {/* OAuth Buttons - TEMPORARILY DISABLED until configured in Supabase */}

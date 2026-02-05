@@ -10,6 +10,7 @@ import { Suspense } from "react";
 // Pages
 import Home from "@/pages/home";
 import Auth from "@/pages/auth";
+import ResetPassword from "@/pages/reset-password";
 import Dashboard from "@/pages/dashboard";
 import Map from "@/pages/map";
 import Bodega from "@/pages/bodega";
@@ -49,6 +50,7 @@ function Router() {
             <Switch>
               <Route path="/" component={Home} />
               <Route path="/auth" component={Auth} />
+              <Route path="/auth/reset-password" component={ResetPassword} />
               <Route path="/dashboard" component={Dashboard} />
               <Route path="/map" component={Map} />
               <Route path="/bodega" component={Bodega} />
