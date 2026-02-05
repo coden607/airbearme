@@ -163,6 +163,11 @@ export async function registerRoutes(app: Express): Promise<Express> {
         tshirtPurchaseDate: null
       });
 
+      // Store password for local auth
+      if (storage.setPassword) {
+        await storage.setPassword(profile.id, userData.password);
+      }
+
       res.json({ user: { id: profile.id, email: profile.email, username: profile.username, role: profile.role } });
     } catch (error: any) {
       logRouteError(req, error);
@@ -173,29 +178,36 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
   app.post("/api/auth/login", async (req, res) => {
     try {
-      if (!supabaseAdmin) {
-        return res.status(500).json({ message: "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SECRET_KEY." });
-      }
-
       const { email, password } = z.object({
         email: z.string().email(),
         password: z.string().min(6),
       }).parse(req.body);
 
-      const { data, error } = await supabaseAdmin.auth.signInWithPassword({ email, password });
-      if (error || !data.user) {
-        return res.status(401).json({ message: error?.message || "Invalid credentials" });
+      // Try Supabase auth first if available
+      if (supabaseAdmin) {
+        const { data, error } = await supabaseAdmin.auth.signInWithPassword({ email, password });
+        if (!error && data.user) {
+          const profile = await ensureUserProfile({
+            email,
+            username: (data.user.user_metadata?.username as string) || email.split("@")[0],
+            fullName: (data.user.user_metadata?.fullName as string | undefined) || null,
+            role: (data.user.user_metadata?.role as "user" | "driver" | "admin" | undefined) || "user",
+            avatarUrl: (data.user.user_metadata?.avatar_url as string | undefined) || null,
+          });
+          return res.json({ user: { id: profile.id, email: profile.email, username: profile.username, role: profile.role, ecoPoints: profile.ecoPoints, totalRides: profile.totalRides, co2Saved: profile.co2Saved } });
+        }
       }
 
-      const profile = await ensureUserProfile({
-        email,
-        username: (data.user.user_metadata?.username as string) || email.split("@")[0],
-        fullName: (data.user.user_metadata?.fullName as string | undefined) || null,
-        role: (data.user.user_metadata?.role as "user" | "driver" | "admin" | undefined) || "user",
-        avatarUrl: (data.user.user_metadata?.avatar_url as string | undefined) || null,
-      });
+      // Fallback to local storage auth
+      if (storage.verifyPassword) {
+        const user = await storage.verifyPassword(email, password);
+        if (user) {
+          return res.json({ user: { id: user.id, email: user.email, username: user.username, role: user.role, ecoPoints: user.ecoPoints, totalRides: user.totalRides, co2Saved: user.co2Saved } });
+        }
+      }
 
-      res.json({ user: { id: profile.id, email: profile.email, username: profile.username, role: profile.role } });
+      // No valid credentials found
+      return res.status(401).json({ message: "Invalid email or password" });
     } catch (error: any) {
       logRouteError(req, error);
       res.status(400).json({ message: error.message });
@@ -204,10 +216,6 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
   app.post("/api/auth/sync-profile", async (req, res) => {
     try {
-      if (!supabaseAdmin) {
-        return res.status(500).json({ message: "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SECRET_KEY." });
-      }
-
       // Prevent privilege escalation by ignoring client-provided role
       delete (req.body as any).role;
       const payload = profileSchema.parse(req.body);

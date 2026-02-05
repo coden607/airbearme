@@ -123,6 +123,10 @@ interface IStorage {
   updateUser(id: string, updates: Partial<User>): Promise<User>;
   getRidesByUserAndDate(userId: string, date: string): Promise<Ride[]>;
 
+  // Password management (for local auth)
+  verifyPassword?(email: string, password: string): Promise<User | null>;
+  setPassword?(userId: string, password: string): Promise<void>;
+
   // Spots
   getAllSpots(): Promise<Spot[]>;
   createSpot(spot: InsertSpot): Promise<Spot>;
@@ -167,12 +171,37 @@ interface IStorage {
 
 class MemStorage implements IStorage {
   private users = new Map<string, User>();
+  private userPasswords = new Map<string, string>(); // Store hashed passwords
   private spots = new Map<string, Spot>();
   private airbears = new Map<string, Airbear>();
   private rides = new Map<string, Ride>();
   private bodegaItems = new Map<string, BodegaItem>();
   private orders = new Map<string, Order>();
   private payments = new Map<string, Payment>();
+
+  // Simple password hashing for demo (in production, use bcrypt)
+  private hashPassword(password: string): string {
+    let hash = 0;
+    for (let i = 0; i < password.length; i++) {
+      const char = password.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return `hash_${Math.abs(hash).toString(16)}_${password.length}`;
+  }
+
+  async verifyPassword(email: string, password: string): Promise<User | null> {
+    const user = await this.getUserByEmail(email);
+    if (!user) return null;
+    const storedHash = this.userPasswords.get(user.id);
+    if (!storedHash) return null;
+    const inputHash = this.hashPassword(password);
+    return storedHash === inputHash ? user : null;
+  }
+
+  async setPassword(userId: string, password: string): Promise<void> {
+    this.userPasswords.set(userId, this.hashPassword(password));
+  }
 
   constructor() {
     // Pre-seed with Binghamton spots for development

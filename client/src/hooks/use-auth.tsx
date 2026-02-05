@@ -149,12 +149,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const client = assertSupabase();
-      const { data, error } = await client.auth.signInWithPassword({ email, password });
-      if (error || !data.user) {
-        throw new Error(error?.message || "Login failed");
+      // Try API login first (works with both Supabase and local storage)
+      const response = await apiRequest("POST", "/api/auth/login", { email, password });
+
+      if (response.ok) {
+        const data = await response.json();
+        const loginUser: User = {
+          id: data.user.id,
+          email: data.user.email,
+          username: data.user.username,
+          role: data.user.role || "user",
+          ecoPoints: data.user.ecoPoints || 0,
+          totalRides: data.user.totalRides || 0,
+          co2Saved: data.user.co2Saved || "0",
+          fullName: data.user.fullName,
+          avatarUrl: data.user.avatarUrl,
+        };
+        setUser(loginUser);
+        localStorage.setItem("airbear-user", JSON.stringify(loginUser));
+
+        // Also try to sign in with Supabase for session management (optional)
+        const client = getSupabaseClient(false);
+        if (client) {
+          try {
+            await client.auth.signInWithPassword({ email, password });
+          } catch {
+            // Ignore Supabase errors - we already have the user from API
+          }
+        }
+        return;
       }
-      await syncProfile(data.user);
+
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Login failed");
     } catch (error: any) {
       throw new Error(error.message || "Login failed");
     } finally {

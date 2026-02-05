@@ -12,12 +12,12 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import AirbearWheel from "@/components/airbear-wheel";
 import LoadingSpinner from "@/components/loading-spinner";
-import { 
-  ShoppingCart, 
-  Plus, 
-  Minus, 
-  Sparkles, 
-  Leaf, 
+import {
+  ShoppingCart,
+  Plus,
+  Minus,
+  Sparkles,
+  Leaf,
   Star,
   Filter,
   Search,
@@ -27,7 +27,9 @@ import {
   Apple,
   Cookie,
   ShoppingBag,
-  Image
+  Image,
+  Smartphone,
+  Heart
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -122,16 +124,19 @@ export default function Bodega() {
 
   const categories = [
     { id: "all", name: "All", Icon: LayoutGrid },
-    { id: "beverages", name: "Beverages", Icon: Coffee },
+    { id: "beverages", name: "Drinks", Icon: Coffee },
     { id: "food", name: "Food", Icon: Apple },
     { id: "snacks", name: "Snacks", Icon: Cookie },
-    { id: "accessories", name: "Accessories", Icon: ShoppingBag },
+    { id: "electronics", name: "Tech", Icon: Smartphone },
+    { id: "health", name: "Health", Icon: Heart },
+    { id: "accessories", name: "Gear", Icon: ShoppingBag },
   ];
 
   const filteredItems = items?.filter(item => {
+    const matchesCategory = selectedCategory === "all" || item.category === selectedCategory;
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          item.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
+    return matchesCategory && matchesSearch;
   }) || [];
 
   const addToCart = (item: BodegaItem, quantity: number = 1) => {
@@ -265,7 +270,7 @@ export default function Bodega() {
           transition={{ duration: 0.8, delay: 0.4 }}
         >
           <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="mb-8">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 bg-muted/50">
+            <TabsList className="flex flex-wrap justify-center gap-1 bg-muted/50 h-auto p-2">
               {categories.map((category) => (
                 <TabsTrigger 
                   key={category.id}
