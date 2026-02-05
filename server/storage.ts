@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { randomUUID } from "crypto";
+import { env } from "./utils.js";
 import {
   User, InsertUser,
   Spot, InsertSpot,
@@ -292,7 +292,7 @@ class MemStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const user: User = {
       ...insertUser,
-      id: insertUser.id || randomUUID(),
+      id: insertUser.id || (globalThis as any).crypto.randomUUID(),
       fullName: insertUser.fullName || null,
       avatarUrl: insertUser.avatarUrl || null,
       role: insertUser.role || "user",
@@ -336,7 +336,7 @@ class MemStorage implements IStorage {
   async createSpot(insertSpot: InsertSpot): Promise<Spot> {
     const spot: Spot = {
       ...insertSpot,
-      id: randomUUID(),
+      id: (globalThis as any).crypto.randomUUID(),
       isActive: insertSpot.isActive ?? true,
       createdAt: new Date()
     };
@@ -364,7 +364,7 @@ class MemStorage implements IStorage {
   async createAirbear(insertAirbear: InsertAirbear): Promise<Airbear> {
     const airbear: Airbear = {
       ...insertAirbear,
-      id: randomUUID(),
+      id: (globalThis as any).crypto.randomUUID(),
       driverId: insertAirbear.driverId || null,
       currentSpotId: insertAirbear.currentSpotId || null,
       latitude: insertAirbear.latitude ?? null,
@@ -414,7 +414,7 @@ class MemStorage implements IStorage {
   async createRide(insertRide: InsertRide): Promise<Ride> {
     const ride: Ride = {
       ...insertRide,
-      id: randomUUID(),
+      id: (globalThis as any).crypto.randomUUID(),
       driverId: insertRide.driverId || null,
       airbearId: insertRide.airbearId || null,
       status: insertRide.status || "pending",
@@ -457,7 +457,7 @@ class MemStorage implements IStorage {
   async createBodegaItem(insertItem: InsertBodegaItem): Promise<BodegaItem> {
     const item: BodegaItem = {
       ...insertItem,
-      id: randomUUID(),
+      id: (globalThis as any).crypto.randomUUID(),
       description: insertItem.description || null,
       imageUrl: insertItem.imageUrl || null,
       isEcoFriendly: insertItem.isEcoFriendly || false,
@@ -489,7 +489,7 @@ class MemStorage implements IStorage {
   async createOrder(insertOrder: InsertOrder): Promise<Order> {
     const order: Order = {
       ...insertOrder,
-      id: randomUUID(),
+      id: (globalThis as any).crypto.randomUUID(),
       rideId: insertOrder.rideId || null,
       airbearId: insertOrder.airbearId || null,
       status: insertOrder.status || "pending",
@@ -516,7 +516,7 @@ class MemStorage implements IStorage {
   async createPayment(insertPayment: InsertPayment): Promise<Payment> {
     const payment: Payment = {
       ...insertPayment,
-      id: randomUUID(),
+      id: (globalThis as any).crypto.randomUUID(),
       orderId: insertPayment.orderId || null,
       rideId: insertPayment.rideId || null,
       stripePaymentIntentId: insertPayment.stripePaymentIntentId || null,
@@ -747,8 +747,8 @@ class SupabaseStorage implements IStorage {
   }
 }
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = env.SUPABASE_URL;
+const supabaseServiceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
 
 // Force using MemStorage for development/testing when using test credentials
 const isUsingTestCredentials =
@@ -756,9 +756,9 @@ const isUsingTestCredentials =
   supabaseServiceRoleKey?.includes('test-supabase-secret-key-for-development-only');
 
 // Use MemStorage for development or when USE_MOCK_DATABASE is explicitly set
-const useMockDatabase = process.env.USE_MOCK_DATABASE === 'true' ||
-                       process.env.NODE_ENV === "development" ||
-                       process.env.VERCEL_ENV === 'development';
+const useMockDatabase = env.USE_MOCK_DATABASE === 'true' ||
+                       env.NODE_ENV === "development" ||
+                       env.VERCEL_ENV === 'development';
 
 export const storage: IStorage = !isUsingTestCredentials && !useMockDatabase && supabaseUrl && supabaseServiceRoleKey
   ? (() => {

@@ -1,28 +1,19 @@
-import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
-import { randomUUID } from "crypto";
 import { registerRoutes } from "./routes.js";
-import { setupVite, serveStatic, log } from "./vite.js";
+import { log, env } from "./utils.js";
 
 const app = express();
 app.use((req, res, next) => {
   const incomingRequestId = req.get("x-request-id");
   const requestId = incomingRequestId && incomingRequestId.length < 128
     ? incomingRequestId
-    : randomUUID();
+    : (globalThis as any).crypto.randomUUID();
   res.locals.requestId = requestId;
   res.setHeader("x-request-id", requestId);
   next();
 });
 
-process.on("unhandledRejection", (reason) => {
-  console.error("[UnhandledRejection]", reason);
-});
-
-process.on("uncaughtException", (error) => {
-  console.error("[UncaughtException]", error);
-});
 app.use(express.json({
   verify: (req: any, _res, buf) => {
     if (req.originalUrl.startsWith('/api/webhooks/stripe')) {
@@ -148,7 +139,7 @@ const prodCsp = {
 // Security middleware with CSP
 app.use(
   helmet({
-    contentSecurityPolicy: process.env.NODE_ENV === 'production' ? prodCsp : devCsp,
+    contentSecurityPolicy: env.NODE_ENV === 'production' ? prodCsp : devCsp,
     crossOriginEmbedderPolicy: false,
   })
 );
@@ -168,7 +159,7 @@ app.use((req, res, next) => {
 
     res.on("finish", () => {
       const duration = Date.now() - start;
-      const isProduction = process.env.NODE_ENV === "production";
+      const isProduction = env.NODE_ENV === "production";
       const isError = res.statusCode >= 400;
       const requestId = res.locals.requestId as string | undefined;
 
@@ -196,7 +187,7 @@ app.use((req, res, next) => {
 
 export async function createApp() {
   // Register API routes BEFORE Vite middleware
-  const server = await registerRoutes(app);
+  await registerRoutes(app);
 
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -210,28 +201,18 @@ export async function createApp() {
     res.status(status).json({ message });
   });
 
+  let server;
   if (app.get("env") === "development") {
+    const { createServer } = await import("http");
+    server = createServer(app);
+    const { setupVite } = await import("./vite.js");
     await setupVite(app, server);
   } else {
+    const { serveStatic } = await import("./vite.js");
     serveStatic(app);
   }
 
   return { app, server };
-}
-
-// Only start the server if this file is run directly (not as a module)
-if (import.meta.url === `file://${process.argv[1]}` || process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
-  (async () => {
-    const { server } = await createApp();
-    const port = parseInt(process.env.PORT || '5000', 10);
-    server.listen({
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    }, () => {
-      log(`serving on port ${port}`);
-    });
-  })();
 }
 
 export default app;

@@ -1,35 +1,11 @@
 import type { Express, Request } from "express";
-import { createServer, type Server } from "http";
-import Stripe from "stripe";
 import { storage } from "./storage.js";
 import { insertRideSchema, insertOrderSchema, insertPaymentSchema } from "../shared/schema.js";
 import { z } from "zod";
 import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
 import { getActiveSpotsData } from "../shared/spots-data.js";
+import { env } from "./utils.js";
 
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-if (!stripeSecretKey) {
-  console.warn("⚠️ STRIPE_SECRET_KEY is not configured. Stripe functionality will be disabled.");
-}
-
-const stripe = stripeSecretKey ? new Stripe(stripeSecretKey, {}) : null;
-
-const getStripe = () => {
-  if (!stripe) {
-    throw new Error("Stripe is not configured. Set STRIPE_SECRET_KEY.");
-  }
-  return stripe;
-};
-
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabaseAdmin = supabaseUrl && supabaseServiceRoleKey
-  ? createSupabaseAdminClient(supabaseUrl, supabaseServiceRoleKey, { auth: { autoRefreshToken: false } })
-  : null;
-
-if (!supabaseAdmin) {
-  console.warn("⚠️ Supabase admin client not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY for live auth.");
-}
 
 const logRouteError = (req: Request, error: unknown) => {
   const requestId = req.get("x-request-id");
@@ -37,15 +13,34 @@ const logRouteError = (req: Request, error: unknown) => {
   console.error(`${prefix}[RouteError] ${req.method} ${req.path}`, error);
 };
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express): Promise<Express> {
+  const supabaseUrl = env.SUPABASE_URL;
+  const supabaseServiceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseAdmin = supabaseUrl && supabaseServiceRoleKey
+    ? createSupabaseAdminClient(supabaseUrl, supabaseServiceRoleKey, { auth: { autoRefreshToken: false } })
+    : null;
+
+  if (!supabaseAdmin) {
+    console.warn("⚠️ Supabase admin client not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY for live auth.");
+  }
+
+  const stripeSecretKey = env.STRIPE_SECRET_KEY;
+  const StripeMod = stripeSecretKey ? await import("stripe") : null;
+  const Stripe = StripeMod?.default || StripeMod;
+  const stripe = (stripeSecretKey && Stripe) ? new (Stripe as any)(stripeSecretKey, {}) : null;
+
+  const getStripe = () => {
+    if (!stripe) {
+      throw new Error("Stripe is not configured. Set STRIPE_SECRET_KEY.");
+    }
+    return stripe;
+  };
+
   // Health check
   app.get("/api/health", (_req, res) => {
     res.json({
       status: "ok",
       timestamp: new Date().toISOString(),
-      supabaseUrl: supabaseUrl ? "configured" : "missing",
-      supabaseServiceRoleKey: supabaseServiceRoleKey ? "configured" : "missing",
-      stripeSecretKey: stripeSecretKey ? "configured" : "missing",
     });
   });
 
@@ -109,7 +104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: z.string().email(),
         username: z.string().min(2),
         fullName: z.string().optional().nullable(),
-        role: z.enum(["user", "driver", "admin"]).optional(),
+        role: z.enum(["user", "driver"]).optional(),
         avatarUrl: z.string().optional().nullable(),
         password: z.string().min(6),
       });
@@ -190,6 +185,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SECRET_KEY." });
       }
 
+      // Prevent privilege escalation by ignoring client-provided role
+      delete (req.body as any).role;
       const payload = profileSchema.parse(req.body);
       const profile = await ensureUserProfile(payload);
       res.json({ user: profile });
@@ -653,7 +650,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const sig = req.headers['stripe-signature'];
-      const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      const endpointSecret = env.STRIPE_WEBHOOK_SECRET;
 
       if (!sig || !endpointSecret) {
         return res.status(400).json({ message: "Missing signature or webhook secret" });
@@ -858,6 +855,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
-  return httpServer;
+  return app;
 }
