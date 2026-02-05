@@ -155,6 +155,18 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
       let authUserId: string | undefined;
 
+      // Simple password hash for fallback auth
+      const hashPassword = (pwd: string): string => {
+        let hash = 0;
+        for (let i = 0; i < pwd.length; i++) {
+          const char = pwd.charCodeAt(i);
+          hash = ((hash << 5) - hash) + char;
+          hash = hash & hash;
+        }
+        return `hash_${Math.abs(hash).toString(16)}_${pwd.length}`;
+      };
+      const passwordHash = hashPassword(userData.password);
+
       // If Supabase is available, create auth user first
       if (supabaseAdmin) {
         console.log(`[Auth] Creating Supabase auth user for: ${userData.email}`);
@@ -166,6 +178,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
             username: userData.username,
             fullName: userData.fullName,
             role: userData.role || "user",
+            password_hash: passwordHash, // Store hash for fallback verification
           },
         });
 
@@ -218,33 +231,65 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
       console.log(`[Auth] Login attempt for: ${email}`);
 
+      // Simple password hash for verification
+      const hashPassword = (pwd: string): string => {
+        let hash = 0;
+        for (let i = 0; i < pwd.length; i++) {
+          const char = pwd.charCodeAt(i);
+          hash = ((hash << 5) - hash) + char;
+          hash = hash & hash;
+        }
+        return `hash_${Math.abs(hash).toString(16)}_${pwd.length}`;
+      };
+
       // Try Supabase auth first if available
-      if (supabaseAuth) {
+      if (supabaseAdmin && supabaseAuth) {
         console.log(`[Auth] Trying Supabase auth for: ${email}`);
         try {
+          // Try signInWithPassword first
           const { data, error } = await supabaseAuth.auth.signInWithPassword({ email, password });
 
-          if (error) {
-            console.log(`[Auth] Supabase auth failed: ${error.message}, code: ${error.status}, name: ${error.name}`);
-            console.log(`[Auth] Full error:`, JSON.stringify(error));
+          if (!error && data.user) {
+            console.log(`[Auth] Supabase signIn success for: ${email}`);
+            const profile = await ensureUserProfile({
+              email,
+              username: (data.user.user_metadata?.username as string) || email.split("@")[0],
+              fullName: (data.user.user_metadata?.fullName as string | undefined) || null,
+              role: (data.user.user_metadata?.role as "user" | "driver" | "admin" | undefined) || "user",
+              avatarUrl: (data.user.user_metadata?.avatar_url as string | undefined) || null,
+            });
+            return res.json({ user: { id: profile.id, email: profile.email, username: profile.username, role: profile.role, ecoPoints: profile.ecoPoints, totalRides: profile.totalRides, co2Saved: profile.co2Saved } });
           }
 
-          if (!error && data.user) {
-            console.log(`[Auth] Supabase auth success for: ${email}`);
-          const profile = await ensureUserProfile({
-            email,
-            username: (data.user.user_metadata?.username as string) || email.split("@")[0],
-            fullName: (data.user.user_metadata?.fullName as string | undefined) || null,
-            role: (data.user.user_metadata?.role as "user" | "driver" | "admin" | undefined) || "user",
-            avatarUrl: (data.user.user_metadata?.avatar_url as string | undefined) || null,
-          });
-          return res.json({ user: { id: profile.id, email: profile.email, username: profile.username, role: profile.role, ecoPoints: profile.ecoPoints, totalRides: profile.totalRides, co2Saved: profile.co2Saved } });
-        }
+          if (error) {
+            console.log(`[Auth] Supabase signIn failed: ${error.message}`);
+
+            // Fallback: Check password_hash in user metadata
+            const { data: userData } = await supabaseAdmin.auth.admin.listUsers();
+            const authUser = userData?.users?.find(u => u.email === email);
+
+            if (authUser) {
+              const storedHash = authUser.user_metadata?.password_hash;
+              const inputHash = hashPassword(password);
+
+              if (storedHash && storedHash === inputHash) {
+                console.log(`[Auth] Password hash match for: ${email}`);
+                const profile = await ensureUserProfile({
+                  email,
+                  username: (authUser.user_metadata?.username as string) || email.split("@")[0],
+                  fullName: (authUser.user_metadata?.fullName as string | undefined) || null,
+                  role: (authUser.user_metadata?.role as "user" | "driver" | "admin" | undefined) || "user",
+                  avatarUrl: (authUser.user_metadata?.avatar_url as string | undefined) || null,
+                });
+                return res.json({ user: { id: profile.id, email: profile.email, username: profile.username, role: profile.role, ecoPoints: profile.ecoPoints, totalRides: profile.totalRides, co2Saved: profile.co2Saved } });
+              }
+            }
+          }
         } catch (supabaseError: any) {
           console.error(`[Auth] Supabase auth exception:`, supabaseError);
         }
       } else {
-        console.log(`[Auth] Supabase auth client not configured, skipping Supabase auth`);
+        console.log(`[Auth] Supabase clients not configured`);
       }
 
       // Fallback to local storage auth
