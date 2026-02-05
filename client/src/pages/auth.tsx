@@ -299,36 +299,40 @@ export default function Auth() {
                 </div>
 
                 {/* Email/Password Form */}
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="flex items-center">
+                    <Label htmlFor="signin-email" className="flex items-center">
                       <Mail className="w-4 h-4 mr-2" />
                       Email
                     </Label>
                     <Input
-                      id="email"
+                      id="signin-email"
+                      name="email"
                       type="email"
                       value={formData.email}
                       onChange={(e) => handleInputChange("email", e.target.value)}
                       placeholder="your@email.com"
                       required
+                      autoComplete="email"
                       className="focus:ring-primary"
                       data-testid="input-email"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="flex items-center">
+                    <Label htmlFor="signin-password" className="flex items-center">
                       <Lock className="w-4 h-4 mr-2" />
                       Password
                     </Label>
                     <div className="relative">
                       <Input
-                        id="password"
+                        id="signin-password"
+                        name="password"
                         type={showPassword ? "text" : "password"}
                         value={formData.password}
                         onChange={(e) => handleInputChange("password", e.target.value)}
                         placeholder="Enter your password"
                         required
+                        autoComplete="current-password"
                         className="focus:ring-primary pr-10"
                         data-testid="input-password"
                       />
@@ -400,52 +404,58 @@ export default function Auth() {
                 </div>
 
                 {/* Registration Form */}
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
                   <div className="space-y-2">
-                    <Label htmlFor="username" className="flex items-center">
+                    <Label htmlFor="signup-username" className="flex items-center">
                       <User className="w-4 h-4 mr-2" />
                       Username
                     </Label>
                     <Input
-                      id="username"
+                      id="signup-username"
+                      name="username"
                       type="text"
                       value={formData.username}
                       onChange={(e) => handleInputChange("username", e.target.value)}
                       placeholder="Choose a username"
                       required
+                      autoComplete="username"
                       className="focus:ring-primary"
                       data-testid="input-username"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="flex items-center">
+                    <Label htmlFor="signup-email" className="flex items-center">
                       <Mail className="w-4 h-4 mr-2" />
                       Email
                     </Label>
                     <Input
-                      id="email"
+                      id="signup-email"
+                      name="email"
                       type="email"
                       value={formData.email}
                       onChange={(e) => handleInputChange("email", e.target.value)}
                       placeholder="your@email.com"
                       required
+                      autoComplete="email"
                       className="focus:ring-primary"
                       data-testid="input-email"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="flex items-center">
+                    <Label htmlFor="signup-password" className="flex items-center">
                       <Lock className="w-4 h-4 mr-2" />
                       Password
                     </Label>
                     <div className="relative">
                       <Input
-                        id="password"
+                        id="signup-password"
+                        name="password"
                         type={showPassword ? "text" : "password"}
                         value={formData.password}
                         onChange={(e) => handleInputChange("password", e.target.value)}
                         placeholder="Enter your password"
                         required
+                        autoComplete="new-password"
                         className="focus:ring-primary pr-10"
                         data-testid="input-password"
                       />
@@ -466,18 +476,20 @@ export default function Auth() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword" className="flex items-center">
+                    <Label htmlFor="signup-confirm-password" className="flex items-center">
                       <Lock className="w-4 h-4 mr-2" />
                       Confirm Password
                     </Label>
                     <div className="relative">
                       <Input
-                        id="confirmPassword"
+                        id="signup-confirm-password"
+                        name="confirm-password"
                         type={showPassword ? "text" : "password"}
                         value={formData.confirmPassword}
                         onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
                         placeholder="Confirm your password"
                         required
+                        autoComplete="new-password"
                         className="focus:ring-primary pr-10"
                         data-testid="input-confirm-password"
                       />
