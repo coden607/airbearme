@@ -8,11 +8,11 @@
     },
     "rewrites": [
         {
-            "source": "/api/(.*)",
+            "source": "/api/:path*",
             "destination": "/api/[...path].ts"
         },
         {
-            "source": "/((?!.*\\.(png|jpg|jpeg|gif|svg|ico|css|js|woff|woff2|ttf|eot|json|webp|mp4|webm)).*)",
+            "source": "/:path*",
             "destination": "/index.html"
         }
     ]
