@@ -878,6 +878,21 @@
 }
 
 /* Map-specific animations */
+@keyframes driver-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 15px rgba(239, 68, 68, 0);
+  }
+}
+
+.my-driver-marker > div > div:first-child {
+  animation: driver-pulse 1.5s ease-in-out infinite;
+}
+
 @keyframes particle {
   0%, 100% {
     opacity: 0;

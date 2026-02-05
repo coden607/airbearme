@@ -33,9 +33,16 @@ export default function Auth() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isAppleLoading, setIsAppleLoading] = useState(false);
 
+  // Get redirect URL from query params
+  const getRedirectUrl = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('redirect') || '/dashboard';
+  };
+
   useEffect(() => {
     if (user) {
-      navigate("/dashboard");
+      const redirectUrl = getRedirectUrl();
+      navigate(redirectUrl);
     }
   }, [user, navigate]);
 
@@ -128,7 +135,8 @@ export default function Auth() {
           description: "Your AirBear account has been created successfully",
         });
 
-        navigate("/dashboard");
+        const redirectUrl = getRedirectUrl();
+        navigate(redirectUrl);
       } else {
         if (!formData.email || !formData.password) {
           throw new Error("Please enter both email and password");
@@ -141,7 +149,8 @@ export default function Auth() {
           description: "You've been signed in successfully",
         });
 
-        navigate("/dashboard");
+        const redirectUrl = getRedirectUrl();
+        navigate(redirectUrl);
       }
     } catch (error: any) {
       toast({
@@ -467,14 +476,15 @@ export default function Auth() {
         </Tabs>
 
         {/* OAuth Section */}
-        <div className="mt-6">
+        {/* OAuth Buttons - TEMPORARILY DISABLED until configured in Supabase */}
+        {false && (<div className="mt-6">
           <Card className="w-full max-w-md mx-auto">
             <CardContent className="space-y-4">
               <div className="text-center">
                 <h3 className="text-lg font-semibold">Or continue with</h3>
                 <p className="text-sm text-muted-foreground">Quick sign-in with your social account</p>
               </div>
-              
+
               <div className="space-y-3">
                 <Button
                   variant="outline"
@@ -547,7 +557,7 @@ export default function Auth() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </div>)}
 
         <div className="text-center text-sm text-muted-foreground">
           By continuing, you agree to our{" "}

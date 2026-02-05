@@ -5,6 +5,7 @@ import { storage } from "./storage.js";
 import { insertRideSchema, insertOrderSchema, insertPaymentSchema } from "../shared/schema.js";
 import { z } from "zod";
 import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
+import { getActiveSpotsData } from "../shared/spots-data.js";
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 if (!stripeSecretKey) {
@@ -203,15 +204,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Try to get from storage first
       const storageSpots = await storage.getAllSpots();
-      
-      // If storage has insufficient spots, fallback to client data
+
+      // If storage has insufficient spots, fallback to shared spots data
       if (storageSpots.length < 16) {
-        // Import client spots data as fallback
-        const { getActiveSpots } = await import("../client/src/lib/spots.js");
-        const clientSpots = getActiveSpots();
-        return res.json(clientSpots);
+        const sharedSpots = getActiveSpotsData();
+        return res.json(sharedSpots);
       }
-      
+
       res.json(storageSpots);
     } catch (error) {
       logRouteError(req, error);
@@ -285,12 +284,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/rides/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const ride = await storage.getRideById(id);
+      if (!ride) {
+        return res.status(404).json({ message: "Ride not found" });
+      }
+      res.json(ride);
+    } catch (error: any) {
+      logRouteError(req, error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.patch("/api/rides/:id", async (req, res) => {
     try {
       const { id } = req.params;
       const updates = req.body;
       const ride = await storage.updateRide(id, updates);
       res.json(ride);
+    } catch (error: any) {
+      logRouteError(req, error);
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Get pending rides for drivers
+  app.get("/api/rides/pending", async (req, res) => {
+    try {
+      const pendingRides = await storage.getPendingRides();
+      res.json(pendingRides);
+    } catch (error: any) {
+      logRouteError(req, error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get rides assigned to a driver
+  app.get("/api/rides/driver/:driverId", async (req, res) => {
+    try {
+      const { driverId } = req.params;
+      const rides = await storage.getRidesByDriver(driverId);
+      res.json(rides);
+    } catch (error: any) {
+      logRouteError(req, error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Update airbear (for assigning drivers, updating location, etc.)
+  app.patch("/api/airbears/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const airbear = await storage.updateAirbear(id, updates);
+      if (!airbear) {
+        return res.status(404).json({ message: "Airbear not found" });
+      }
+      res.json(airbear);
     } catch (error: any) {
       logRouteError(req, error);
       res.status(400).json({ message: error.message });
@@ -364,8 +416,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid amount" });
       }
 
-      let paymentIntent;
-
       if (paymentMethod === "cash") {
         // For cash payments, generate QR code data
         const qrData = {
@@ -381,21 +431,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
           qrCode: Buffer.from(JSON.stringify(qrData)).toString('base64'),
           paymentMethod: "cash"
         });
-      } else {
-        // Create Stripe PaymentIntent
-        paymentIntent = await getStripe().paymentIntents.create({
-          amount: Math.round(amount * 100), // Convert to cents
+      }
+
+      // Check if Stripe is configured
+      if (!stripe) {
+        // Return mock payment intent for demo mode
+        console.log('Stripe not configured - returning demo payment intent');
+        return res.json({
+          clientSecret: `mock_${Date.now()}_secret`,
+          paymentIntentId: `mock_pi_${Date.now()}`,
+          amount: Math.round(amount * 100),
           currency: "usd",
-          automatic_payment_methods: {
-            enabled: true
-          },
-          metadata: {
-            orderId: orderId || null,
-            rideId: rideId || null,
-            userId: userId || null
-          }
+          status: "demo_mode"
         });
       }
+
+      // Create Stripe PaymentIntent
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(amount * 100), // Convert to cents
+        currency: "usd",
+        automatic_payment_methods: {
+          enabled: true
+        },
+        metadata: {
+          orderId: orderId || null,
+          rideId: rideId || null,
+          userId: userId || null
+        }
+      });
 
       res.json({
         clientSecret: paymentIntent.client_secret,
@@ -420,7 +483,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid amount" });
       }
 
-      const session = await getStripe().checkout.sessions.create({
+      // Check if Stripe is configured
+      if (!stripe) {
+        console.log('Stripe not configured - returning demo checkout session');
+        return res.json({
+          sessionId: `mock_cs_${Date.now()}`,
+          url: successUrl || `${req.protocol}://${req.get('host')}/dashboard?demo=true`,
+        });
+      }
+
+      const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         mode: 'payment',
         line_items: [{
@@ -497,10 +569,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // CEO T-shirt purchase route
   app.post("/api/ceo-tshirt/purchase", async (req, res) => {
     try {
-      const { userId, size, amount } = req.body;
+      const { userId, size } = req.body;
+
+      // Check if Stripe is configured
+      if (!stripe) {
+        console.log('Stripe not configured - returning demo CEO T-shirt payment');
+        return res.json({
+          clientSecret: `mock_ceo_${Date.now()}_secret`,
+          paymentIntentId: `mock_pi_ceo_${Date.now()}`
+        });
+      }
 
       // Create Stripe PaymentIntent for CEO T-shirt
-      const paymentIntent = await getStripe().paymentIntents.create({
+      const paymentIntent = await stripe.paymentIntents.create({
         amount: 10000, // $100.00 in cents
         currency: "usd",
         automatic_payment_methods: {
@@ -565,6 +646,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Webhook for Stripe
   app.post("/api/webhooks/stripe", async (req, res) => {
     try {
+      // Check if Stripe is configured
+      if (!stripe) {
+        console.log('Stripe webhook received but Stripe not configured - ignoring');
+        return res.json({ received: true, demo: true });
+      }
+
       const sig = req.headers['stripe-signature'];
       const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -574,7 +661,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let event;
       try {
-        event = getStripe().webhooks.constructEvent((req as any).rawBody, sig, endpointSecret);
+        event = stripe.webhooks.constructEvent((req as any).rawBody, sig, endpointSecret);
       } catch (err: any) {
         console.error(`Webhook signature verification failed: ${err.message}`);
         return res.status(400).json({ message: `Webhook signature verification failed: ${err.message}` });

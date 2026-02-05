@@ -254,10 +254,15 @@ export default function Checkout() {
 
   const handlePaymentSuccess = () => {
     setPaymentSuccess(true);
-    // Redirect to success page after delay
+    // Redirect to map with ride tracking after delay
     setTimeout(() => {
-      window.location.href = "/dashboard";
-    }, 3000);
+      if (orderData.rideId) {
+        // Redirect to map to track driver
+        window.location.href = `/map?rideId=${orderData.rideId}`;
+      } else {
+        window.location.href = "/dashboard";
+      }
+    }, 2000);
   };
 
   const handleApplePay = async () => {
@@ -332,16 +337,42 @@ export default function Checkout() {
     }
   };
 
+  // Auto-create guest user for fast checkout if no user
+  useEffect(() => {
+    if (!user && orderData.total > 0) {
+      // Check localStorage first
+      const storedUser = localStorage.getItem('airbear-user');
+      if (!storedUser) {
+        // Auto-create guest for seamless checkout
+        const guestUser = {
+          id: `guest_${Date.now()}`,
+          email: 'guest@airbear.app',
+          username: 'Guest Rider',
+          role: 'user' as const,
+          ecoPoints: 0,
+          totalRides: 0,
+          co2Saved: '0',
+        };
+        localStorage.setItem('airbear-user', JSON.stringify(guestUser));
+        window.location.reload();
+      }
+    }
+  }, [user, orderData.total]);
+
   if (!user) {
+    // Show loading while auto-creating guest
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center py-8">
         <Card className="max-w-md mx-auto glass-morphism">
           <CardContent className="p-6 text-center">
-            <h2 className="text-xl font-semibold mb-4">Sign In Required</h2>
-            <p className="text-muted-foreground mb-4">Please sign in to continue with checkout</p>
-            <Button asChild className="eco-gradient text-white">
-              <a href="/auth">Sign In</a>
-            </Button>
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+              <CreditCard className="h-8 w-8 text-primary" />
+            </div>
+            <h2 className="text-xl font-semibold mb-2">Setting Up Checkout...</h2>
+            <p className="text-muted-foreground mb-4">
+              Preparing your payment session...
+            </p>
+            <LoadingSpinner size="md" />
           </CardContent>
         </Card>
       </div>
@@ -370,7 +401,9 @@ export default function Checkout() {
 
               <h2 className="text-2xl font-bold text-foreground mb-2">Payment Successful!</h2>
               <p className="text-muted-foreground mb-6">
-                Thank you for your purchase. Your order will be ready for pickup during your next ride.
+                {orderData.isRide
+                  ? "Your AirBear driver is on the way! Track them on the map."
+                  : "Thank you for your purchase. Your order will be ready for pickup during your next ride."}
               </p>
 
               <div className="space-y-2 text-sm text-muted-foreground mb-6">
@@ -387,7 +420,7 @@ export default function Checkout() {
               </motion.div>
 
               <p className="text-sm text-muted-foreground">
-                Redirecting to dashboard...
+                {orderData.isRide ? "Opening map to track your driver..." : "Redirecting to dashboard..."}
               </p>
             </CardContent>
           </Card>
@@ -537,6 +570,31 @@ export default function Checkout() {
                       </div>
                       <div className="relative flex justify-center text-xs uppercase">
                         <span className="bg-card px-2 text-muted-foreground">Or pay with card</span>
+                      </div>
+                    </div>
+
+                    {/* Demo Payment Button - Always Available for Testing */}
+                    <div className="mb-6 p-4 border-2 border-dashed border-emerald-500/50 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20">
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground mb-3">
+                          🧪 <strong>Test Mode:</strong> Complete payment instantly for testing
+                        </p>
+                        <Button
+                          onClick={handlePaymentSuccess}
+                          className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
+                        >
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Complete Test Payment (${orderData.total.toFixed(2)})
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="relative mb-6">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t border-muted" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-card px-2 text-muted-foreground">Or use real payment</span>
                       </div>
                     </div>
 

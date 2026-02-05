@@ -1,62 +1,159 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
 import { useDriverLocation } from '@/hooks/use-driver-location';
-import { Navigation, Battery, MapPin, Activity, Clock } from 'lucide-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getSupabaseClient } from '@/lib/supabase-client';
+import { Navigation, Battery, MapPin, Activity, Clock, Car, CheckCircle } from 'lucide-react';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+
+interface Spot {
+    id: string;
+    name: string;
+}
 
 export default function DriverDashboard() {
     const { user } = useAuth();
     const { toast } = useToast();
     const queryClient = useQueryClient();
-    const [airbearId] = useState('00000000-0000-0000-0000-000000000001'); // Seeded airbear ID
-    const { isTracking, location, error } = useDriverLocation(airbearId);
+    const [assignedAirbear, setAssignedAirbear] = useState<any>(null);
+    const { isTracking, location, error } = useDriverLocation(assignedAirbear?.id);
 
+    // Fetch spots for displaying names
+    const { data: spots = [] } = useQuery<Spot[]>({
+        queryKey: ['spots'],
+        queryFn: async () => {
+            const res = await fetch('/api/spots');
+            if (!res.ok) return [];
+            return res.json();
+        },
+    });
+
+    const getSpotName = (spotId: string) => {
+        const spot = spots.find((s: Spot) => s.id === spotId);
+        return spot?.name || spotId?.slice(0, 8) || 'Unknown';
+    };
+
+    // Check if driver is assigned to an airbear
+    useEffect(() => {
+        if (!user?.id) return;
+        fetch('/api/airbears')
+            .then(res => res.json())
+            .then(airbears => {
+                const myAirbear = airbears.find((a: any) => a.driverId === user.id);
+                setAssignedAirbear(myAirbear || null);
+            })
+            .catch(() => {});
+    }, [user?.id]);
+
+    // Fetch pending rides
     const { data: pendingRides = [] } = useQuery({
         queryKey: ['rides', 'pending'],
         queryFn: async () => {
-            const supabase = getSupabaseClient(false);
-            if (!supabase) return [];
-            const { data, error } = await supabase
-                .from('rides')
-                .select('*')
-                .eq('status', 'pending')
-                .order('requested_at', { ascending: false });
-            if (error) throw error;
-            return data || [];
+            const res = await fetch('/api/rides/pending');
+            if (!res.ok) return [];
+            return res.json();
         },
-        refetchInterval: 5000, // Check for new rides every 5 seconds
+        refetchInterval: 3000,
     });
 
-    const handleAcceptRide = async (rideId: string) => {
+    // Fetch my active rides (ones I've accepted)
+    const { data: myRides = [] } = useQuery({
+        queryKey: ['rides', 'driver', user?.id],
+        queryFn: async () => {
+            if (!user?.id) return [];
+            const res = await fetch(`/api/rides/driver/${user.id}`);
+            if (!res.ok) return [];
+            return res.json();
+        },
+        enabled: !!user?.id,
+        refetchInterval: 3000,
+    });
+
+    const activeRide = myRides.find((r: any) => ['accepted', 'in_progress'].includes(r.status));
+
+    // Accept ride mutation
+    const acceptRideMutation = useMutation({
+        mutationFn: async (rideId: string) => {
+            const res = await fetch(`/api/rides/${rideId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    status: 'accepted',
+                    driverId: user?.id,
+                    airbearId: assignedAirbear?.id,
+                }),
+            });
+            if (!res.ok) throw new Error('Failed to accept ride');
+            return res.json();
+        },
+        onSuccess: () => {
+            toast({ title: "Ride Accepted!", description: "Head to pickup location." });
+            queryClient.invalidateQueries({ queryKey: ['rides'] });
+        },
+        onError: (err: any) => {
+            toast({ title: "Error", description: err.message, variant: 'destructive' });
+        },
+    });
+
+    // Start ride mutation
+    const startRideMutation = useMutation({
+        mutationFn: async (rideId: string) => {
+            const res = await fetch(`/api/rides/${rideId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'in_progress', startedAt: new Date().toISOString() }),
+            });
+            if (!res.ok) throw new Error('Failed to start ride');
+            return res.json();
+        },
+        onSuccess: () => {
+            toast({ title: "Ride Started!", description: "Heading to destination." });
+            queryClient.invalidateQueries({ queryKey: ['rides'] });
+        },
+    });
+
+    // Complete ride mutation
+    const completeRideMutation = useMutation({
+        mutationFn: async (rideId: string) => {
+            const res = await fetch(`/api/rides/${rideId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'completed', completedAt: new Date().toISOString() }),
+            });
+            if (!res.ok) throw new Error('Failed to complete ride');
+            return res.json();
+        },
+        onSuccess: () => {
+            toast({ title: "Ride Completed!", description: "Great job! Ready for next ride." });
+            queryClient.invalidateQueries({ queryKey: ['rides'] });
+        },
+    });
+
+    // Assign self to an available airbear
+    const claimAirbear = async () => {
         try {
-            const supabase = getSupabaseClient(false);
-            if (!supabase) return;
-
-            const { error } = await supabase
-                .from('rides')
-                .update({ status: 'booked' })
-                .eq('id', rideId);
-
-            if (error) throw error;
-
-            toast({
-                title: "Ride Accepted!",
-                description: "The customer has been notified.",
+            const res = await fetch('/api/airbears');
+            const airbears = await res.json();
+            const available = airbears.find((a: any) => !a.driverId && a.isAvailable);
+            if (!available) {
+                toast({ title: "No Available Vehicles", description: "All AirBears are currently assigned.", variant: 'destructive' });
+                return;
+            }
+            const updateRes = await fetch(`/api/airbears/${available.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ driverId: user?.id }),
             });
-
-            queryClient.invalidateQueries({ queryKey: ['rides', 'pending'] });
+            if (updateRes.ok) {
+                const updated = await updateRes.json();
+                setAssignedAirbear(updated);
+                toast({ title: "Vehicle Assigned!", description: `You are now driving AirBear ${available.id.slice(0, 8)}` });
+            }
         } catch (err: any) {
-            toast({
-                title: "Error",
-                description: err.message,
-                variant: 'destructive',
-            });
+            toast({ title: "Error", description: err.message, variant: 'destructive' });
         }
     };
 
@@ -197,6 +294,74 @@ export default function DriverDashboard() {
                     </Card>
                 </motion.div>
 
+                {/* Active Ride Banner */}
+                {activeRide && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="mb-6"
+                    >
+                        <Card className="border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+                                    <Car className="h-5 w-5" />
+                                    Active Ride
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <div className="text-xs text-muted-foreground">Pickup</div>
+                                            <div className="font-medium flex items-center gap-1">
+                                                <MapPin className="h-3 w-3 text-emerald-500" />
+                                                {getSpotName(activeRide.pickupSpotId)}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="text-xs text-muted-foreground">Destination</div>
+                                            <div className="font-medium flex items-center gap-1">
+                                                <Navigation className="h-3 w-3 text-emerald-500" />
+                                                {getSpotName(activeRide.dropoffSpotId)}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <Badge variant="outline" className="text-lg px-3 py-1">
+                                            ${Number(activeRide.fare || 4).toFixed(2)}
+                                        </Badge>
+                                        <Badge className={activeRide.status === 'accepted' ? 'bg-amber-500' : 'bg-emerald-500'}>
+                                            {activeRide.status === 'accepted' ? 'Heading to Pickup' : 'In Progress'}
+                                        </Badge>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        {activeRide.status === 'accepted' && (
+                                            <Button
+                                                className="flex-1 bg-emerald-500 hover:bg-emerald-600"
+                                                onClick={() => startRideMutation.mutate(activeRide.id)}
+                                                disabled={startRideMutation.isPending}
+                                            >
+                                                <CheckCircle className="h-4 w-4 mr-2" />
+                                                Passenger Picked Up
+                                            </Button>
+                                        )}
+                                        {activeRide.status === 'in_progress' && (
+                                            <Button
+                                                className="flex-1 bg-blue-500 hover:bg-blue-600"
+                                                onClick={() => completeRideMutation.mutate(activeRide.id)}
+                                                disabled={completeRideMutation.isPending}
+                                            >
+                                                <CheckCircle className="h-4 w-4 mr-2" />
+                                                Complete Ride
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+                )}
+
                 {/* Vehicle Info */}
                 <motion.div
                     className="grid grid-cols-1 md:grid-cols-2 gap-6"
@@ -209,23 +374,40 @@ export default function DriverDashboard() {
                             <CardTitle>Your Vehicle</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-muted-foreground">Vehicle ID</span>
-                                    <span className="font-mono font-medium">{airbearId}</span>
+                            {assignedAirbear ? (
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-muted-foreground">Vehicle ID</span>
+                                        <span className="font-mono font-medium">{assignedAirbear.id.slice(0, 8)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-muted-foreground">Battery</span>
+                                        <Badge variant={assignedAirbear.batteryLevel > 50 ? 'default' : 'destructive'}>
+                                            <Battery className="h-3 w-3 mr-1" />
+                                            {assignedAirbear.batteryLevel}%
+                                        </Badge>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-muted-foreground">Location</span>
+                                        <span className="text-sm">{getSpotName(assignedAirbear.currentSpotId)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-muted-foreground">Status</span>
+                                        <Badge variant="default" className="bg-green-500">
+                                            <Activity className="h-3 w-3 mr-1" />
+                                            Active
+                                        </Badge>
+                                    </div>
                                 </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-muted-foreground">Type</span>
-                                    <span className="font-medium">Solar-Powered AirBear</span>
+                            ) : (
+                                <div className="text-center py-6">
+                                    <Car className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                                    <p className="text-muted-foreground mb-4">No vehicle assigned</p>
+                                    <Button onClick={claimAirbear} className="eco-gradient">
+                                        Claim Available Vehicle
+                                    </Button>
                                 </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-muted-foreground">Status</span>
-                                    <Badge variant="default" className="bg-green-500">
-                                        <Battery className="h-3 w-3 mr-1" />
-                                        Active
-                                    </Badge>
-                                </div>
-                            </div>
+                            )}
                         </CardContent>
                     </Card>
 
@@ -241,35 +423,42 @@ export default function DriverDashboard() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            {pendingRides.length === 0 ? (
+                            {!assignedAirbear ? (
+                                <div className="text-center py-6 text-muted-foreground">
+                                    <Car className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                    <p>Claim a vehicle first to accept rides</p>
+                                </div>
+                            ) : pendingRides.length === 0 ? (
                                 <div className="text-center py-6 text-muted-foreground">
                                     <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
                                     <p>No pending ride requests</p>
+                                    <p className="text-xs mt-2">New requests appear automatically</p>
                                 </div>
                             ) : (
-                                <div className="space-y-4">
+                                <div className="space-y-4 max-h-64 overflow-y-auto">
                                     {pendingRides.map((ride: any) => (
                                         <div key={ride.id} className="p-3 border rounded-lg bg-muted/20">
                                             <div className="flex justify-between items-start mb-2">
                                                 <div className="text-sm font-semibold">Ride #{ride.id.slice(0, 8)}</div>
-                                                <Badge variant="outline">${Number(ride.fare).toFixed(2)}</Badge>
+                                                <Badge variant="outline">${Number(ride.fare || 4).toFixed(2)}</Badge>
                                             </div>
                                             <div className="space-y-1 text-xs text-muted-foreground mb-3">
                                                 <div className="flex items-center">
                                                     <MapPin className="h-3 w-3 mr-1 text-primary" />
-                                                    From: {ride.pickup_spot_id}
+                                                    {getSpotName(ride.pickupSpotId)}
                                                 </div>
                                                 <div className="flex items-center">
                                                     <Navigation className="h-3 w-3 mr-1 text-primary" />
-                                                    To: {ride.dropoff_spot_id}
+                                                    {getSpotName(ride.dropoffSpotId)}
                                                 </div>
                                             </div>
                                             <Button
                                                 size="sm"
                                                 className="w-full eco-gradient"
-                                                onClick={() => handleAcceptRide(ride.id)}
+                                                onClick={() => acceptRideMutation.mutate(ride.id)}
+                                                disabled={acceptRideMutation.isPending || !!activeRide}
                                             >
-                                                Accept Ride
+                                                {activeRide ? 'Complete current ride first' : 'Accept Ride'}
                                             </Button>
                                         </div>
                                     ))}

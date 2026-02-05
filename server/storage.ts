@@ -76,6 +76,7 @@ interface IStorage {
   // Rides
   getRidesByUser(userId: string): Promise<Ride[]>;
   getRidesByDriver(driverId: string): Promise<Ride[]>;
+  getPendingRides(): Promise<Ride[]>;
   createRide(ride: InsertRide): Promise<Ride>;
   updateRide(id: string, updates: Partial<Ride>): Promise<Ride>;
   getRideById(id: string): Promise<Ride | undefined>;
@@ -406,6 +407,10 @@ class MemStorage implements IStorage {
     return Array.from(this.rides.values()).filter(r => r.driverId === driverId);
   }
 
+  async getPendingRides(): Promise<Ride[]> {
+    return Array.from(this.rides.values()).filter(r => r.status === 'pending');
+  }
+
   async createRide(insertRide: InsertRide): Promise<Ride> {
     const ride: Ride = {
       ...insertRide,
@@ -658,6 +663,11 @@ class SupabaseStorage implements IStorage {
 
   async getRidesByDriver(driverId: string): Promise<Ride[]> {
     const { data, error } = await this.supabase.from("rides").select("*").eq("driver_id", driverId).order("requested_at", { ascending: false });
+    return this.assert((data ?? []) as Ride[], error);
+  }
+
+  async getPendingRides(): Promise<Ride[]> {
+    const { data, error } = await this.supabase.from("rides").select("*").eq("status", "pending").order("requested_at", { ascending: false });
     return this.assert((data ?? []) as Ride[], error);
   }
 

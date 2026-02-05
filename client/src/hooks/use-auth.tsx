@@ -71,33 +71,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const fetchSession = async () => {
       try {
-        const client = assertSupabase();
+        const client = getSupabaseClient(false);
+
+        // If Supabase is not configured, check localStorage for demo user
+        if (!client) {
+          const storedUser = localStorage.getItem("airbear-user");
+          if (storedUser) {
+            try {
+              setUser(JSON.parse(storedUser));
+            } catch {
+              localStorage.removeItem("airbear-user");
+            }
+          }
+          console.log("Supabase not configured - running in demo mode");
+          return;
+        }
+
         const { data, error } = await client.auth.getSession();
         if (error) throw error;
         const supabaseUser = data.session?.user;
         if (supabaseUser) {
           await syncProfile(supabaseUser);
         } else {
-          localStorage.removeItem("airbear-user");
+          // Check localStorage for demo/guest user
+          const storedUser = localStorage.getItem("airbear-user");
+          if (storedUser) {
+            try {
+              setUser(JSON.parse(storedUser));
+            } catch {
+              localStorage.removeItem("airbear-user");
+            }
+          }
         }
 
-        const { data: listener } = client.auth.onAuthStateChange(async (_event, session) => {
+        const { data: listener } = client.auth.onAuthStateChange(async (event, session) => {
           if (session?.user) {
             await syncProfile(session.user);
           } else {
-            setUser(null);
-            localStorage.removeItem("airbear-user");
+            // Only clear user on explicit logout, not on session check failures
+            if (event === 'SIGNED_OUT') {
+              setUser(null);
+              localStorage.removeItem("airbear-user");
+            } else {
+              // Preserve user from localStorage for other events (initial load, etc.)
+              const storedUser = localStorage.getItem("airbear-user");
+              if (storedUser) {
+                try {
+                  const parsed = JSON.parse(storedUser);
+                  setUser(parsed);
+                } catch {
+                  localStorage.removeItem("airbear-user");
+                }
+              }
+            }
           }
         });
 
         cleanup = () => listener.subscription.unsubscribe();
       } catch (error: any) {
         console.error("Supabase session fetch failed", error);
-        toast({
-          title: "Auth Error",
-          description: error.message || "Unable to verify session. Check Supabase keys.",
-          variant: "destructive",
-        });
+        // Don't show toast for configuration errors in demo mode
+        if (!error.message?.includes("not configured")) {
+          toast({
+            title: "Auth Error",
+            description: error.message || "Unable to verify session.",
+            variant: "destructive",
+          });
+        }
       }
     };
 
