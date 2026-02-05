@@ -1,212 +1,257 @@
+# AirBear PWA - Solar-Powered Eco-Ride Platform
 
-# 🐻 AirBear - Solar-Powered Eco-Ride Platform
+> **"AirBear flair, ride without a care—solar power in the air!"**
 
-**"AirBear flair, ride without a care—solar power in the air!"**
+AirBear is a solar-powered ride-sharing PWA featuring eco-friendly vehicles with onboard mobile bodegas in Binghamton, NY.
 
-AirBear is a revolutionary solar-powered ride-sharing platform featuring eco-friendly vehicles with onboard mobile bodegas in Binghamton, NY. Our mission is to provide sustainable transportation while supporting local businesses and reducing carbon emissions.
+**Production:** https://pwa4-seven.vercel.app
 
-## ✨ Key Features
+## Quick Start
 
-### 🌟 **Triple Role System**
-- **👨‍💼 Admin**: Fleet analytics, system monitoring, revenue tracking
-- **🚗 Driver**: AirBear management, inventory control, ride confirmations  
-- **👤 User**: Booking rides, shopping mobile bodega, viewing eco-impact
-
-### 🎯 **Exclusive CEO T-Shirt Promo**
-- **$100 Value**: CEO-signed authentic AirBear t-shirt
-- **Daily Free Rides**: One complimentary ride every 24 hours
-- **Non-Transferable**: Benefits tied exclusively to purchaser's account
-- **VIP Access**: Priority booking and exclusive events
-
-### 🗺️ **Interactive Binghamton Map**
-- **16 Strategic Locations**: Full coverage across Binghamton from real spots.csv data
-- **Spinning AirBear Markers**: Animated 🐻 logos with hover effects
-- **Real-Time Updates**: Live ETA, distance calculations, availability
-- **Solar-Powered Tracking**: Battery levels, charging status, maintenance
-
-### 🎨 **Stunning Visual Effects**
-- **Spinning Wheels**: Fire, neon, holographic, plasma effects
-- **Solar Animations**: God rays, prism spectrums, solar winds  
-- **Eco Particles**: Floating leaves, fireflies, clean air breezes
-- **Motion Effects**: 3D tilts, ripples, glitches, vortexes, morphs
-- **Performance**: 60fps optimized, low-power mode support
-
-## 🚀 **AirBear Slogans** 🚀
-
-- *"AirBear flair, ride without a care—solar power in the air!"*
-- *"Glide with AirBear, eco-rides so rare!"*  
-- *"Buy the tee, ride for free—AirBear's eco-key!"*
-
-## 📱 Progressive Web App (PWA)
-
-- **📲 One-Click Install**: Native app experience across devices
-- **⚡ Lightning Fast**: Optimized performance and caching
-- **📴 Offline Support**: Core features work without internet
-- **🔔 Push Notifications**: Ride updates and eco-achievements
-
-## 🛠️ Technology Stack
-
-### Frontend
-- **React 18** with TypeScript
-- **Vite** for lightning-fast development
-- **Tailwind CSS** with custom eco-luxury theme
-- **Framer Motion** for stunning animations
-- **TanStack Query** for data management
-- **Wouter** for lightweight routing
-
-### Backend  
-- **Node.js** with Express
-- **TypeScript** for type safety
-- **Drizzle ORM** with PostgreSQL
-- **Stripe** for payment processing
-- **RESTful API** architecture
-
-### Maps & Location
-- **Leaflet** for interactive mapping
-- **Custom AirBear Markers** with real-time data
-- **Geolocation Services** for user positioning
-
-## 🌍 Environmental Impact
-
-- **🌱 Zero Emissions**: 100% solar-powered fleet
-- **📊 CO₂ Tracking**: Real-time environmental impact metrics  
-- **♻️ Sustainable Materials**: Eco-friendly vehicle components
-- **🏆 Green Rewards**: Eco-points and sustainability challenges
-
-## 💳 Monetization Strategy
-
-### 🎯 **Advertising Tiers**
-- **🥈 Silver**: Website banner ads, basic placement
-- **🥇 Gold**: Premium website placement + AirBear LED banners
-- **💎 Platinum**: Full integration + AirBear screen advertisements
-
-### 💰 **Revenue Streams**  
-- Ride booking fees
-- Mobile bodega commissions
-- CEO t-shirt exclusive sales
-- Premium advertising placements
-- Corporate partnerships
-
-## 📥 Installation & Setup
-
-### Prerequisites
-- Node.js 18+ 
-- npm or yarn
-- Modern web browser
-
-### Quick Start
 ```bash
-# Clone the repository
-git clone https://github.com/airbearme/airbear-pwa.git
-cd airbear-pwa
-
 # Install dependencies
 npm install
 
-# Start development server
+# Development (with hot reload)
 npm run dev
 
-# Build for production
+# Production build
 npm run build
 
-# Deploy to production
+# Start production server
 npm start
 ```
 
-### Environment Variables
-```env
-# Supabase Auth (required for email + Google/Apple login)
-SUPABASE_URL=https://your-project-ref.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-VITE_SUPABASE_URL=https://your-project-ref.supabase.co
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+## Project Structure
 
-# Stripe (live keys only - no demo fallback)
+```
+pwa4/
+├── client/                 # React frontend
+│   └── src/
+│       ├── components/     # Reusable UI components
+│       ├── hooks/          # Custom React hooks
+│       │   ├── use-auth.tsx           # Authentication state
+│       │   ├── use-driver-location.tsx # Real-time GPS tracking
+│       │   └── use-toast.ts           # Toast notifications
+│       ├── lib/            # Utilities
+│       │   ├── stripe.ts              # Payment processing
+│       │   ├── supabase-client.ts     # Supabase connection
+│       │   └── spots.ts               # Location data
+│       └── pages/          # Route pages
+│           ├── map.tsx                # Interactive map
+│           ├── checkout.tsx           # Payment flow
+│           ├── driver-dashboard.tsx   # Driver interface
+│           └── auth.tsx               # Login/register
+├── server/                 # Express backend
+│   ├── index.ts           # App entry, middleware
+│   ├── routes.ts          # API endpoints
+│   ├── storage.ts         # Database abstraction
+│   └── utils.ts           # Error handling, logging
+├── shared/                # Shared code
+│   ├── schema.ts          # Database schema (Drizzle)
+│   └── spots-data.ts      # Location data
+└── dist/                  # Production build output
+```
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 18, TypeScript, TailwindCSS, Framer Motion |
+| Backend | Express.js, Node.js, TypeScript |
+| Database | PostgreSQL (Supabase), Drizzle ORM |
+| Auth | Supabase Auth |
+| Payments | Stripe, Apple Pay, Google Pay |
+| Maps | Leaflet.js |
+| Realtime | Supabase Realtime |
+| Hosting | Vercel |
+
+## API Endpoints
+
+### Authentication
+```
+POST /api/auth/register     # Create user account
+POST /api/auth/login        # Supabase sign-in
+POST /api/auth/sync-profile # Sync user profile
+```
+
+### Rides
+```
+POST   /api/rides           # Create ride request
+GET    /api/rides/user/:id  # Get user's rides
+GET    /api/rides/pending   # Get pending rides (drivers)
+GET    /api/rides/driver/:id # Get driver's rides
+GET    /api/rides/:id       # Get ride by ID
+PATCH  /api/rides/:id       # Update ride status
+```
+
+### AirBears (Vehicles)
+```
+GET    /api/airbears        # Get all vehicles
+PATCH  /api/airbears/:id    # Update vehicle (location, status)
+```
+
+### Spots (Locations)
+```
+GET    /api/spots           # Get all pickup/dropoff locations
+```
+
+### Bodega (Store)
+```
+GET    /api/bodega-items    # Get all items
+GET    /api/bodega/items?category=snacks # Filter by category
+```
+
+### Payments
+```
+POST   /api/create-payment-intent    # Create Stripe PaymentIntent
+POST   /api/payments/confirm         # Confirm payment
+POST   /api/payments/confirm-cash    # QR-based cash payment
+POST   /api/webhooks/stripe          # Stripe webhook handler
+```
+
+### Health
+```
+GET    /api/health          # Service health check
+```
+
+## Database Schema
+
+```typescript
+// Users
+users: { id, email, username, role, ecoPoints, totalRides, co2Saved, ... }
+
+// Rides
+rides: { id, userId, driverId, airbearId, pickupSpotId, dropoffSpotId, status, fare, ... }
+
+// AirBears (Vehicles)
+airbears: { id, driverId, latitude, longitude, batteryLevel, isAvailable, ... }
+
+// Spots (Locations)
+spots: { id, name, latitude, longitude, isActive, ... }
+
+// Bodega Items
+bodega_items: { id, name, price, category, isAvailable, stock, ... }
+
+// Orders & Payments
+orders: { id, userId, rideId, items, totalAmount, status, ... }
+payments: { id, userId, amount, status, paymentMethod, ... }
+```
+
+## Environment Variables
+
+```env
+# Supabase (required for production)
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_service_key
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your_anon_key
+
+# Stripe (required for payments)
 VITE_STRIPE_PUBLIC_KEY=pk_live_...
 STRIPE_SECRET_KEY=sk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 
-# Database (Optional - uses in-memory for development)
+# Optional
 DATABASE_URL=postgresql://...
-
-# API Configuration  
 NODE_ENV=production
-PORT=5000
+USE_MOCK_DATABASE=false
 ```
 
-## 🚀 Deployment Options
+## Development
 
-### Vercel Deployment (Recommended)
-1. **Connect Repo**: Import this project into Vercel.
-2. **Set Environment Variables**: Add the Supabase + Stripe keys from above.
-3. **Deploy**: Vercel will run `npm run vercel-build` and serve the app.
-
-To use your domain, point DNS to Vercel (or set a 301/forward) and keep the app hosted on Vercel for both frontend and backend.
-
-### Replit Static Deployment (Alternative)
-1. Open Deployments tab in Replit
-2. Select "Static" deployment type
-3. Configure:
-   - **Build Command**: `npm run build`
-   - **Public Directory**: `dist`
-4. Deploy with one click!
-
-### Manual Deployment
+### Local Development
 ```bash
-# Build the application
-npm run build
-
-# Serve static files
-npx serve dist -p 3000
+npm run dev  # Starts Vite dev server with hot reload
 ```
 
-## 📊 Analytics & Monitoring
+### Type Checking
+```bash
+npx tsc --noEmit  # Check TypeScript errors
+```
 
-- **Real-Time Fleet Status**: Live AirBear locations and availability
-- **Revenue Tracking**: Detailed earnings and transaction analytics  
-- **User Engagement**: Ride patterns, popular routes, user retention
-- **Environmental Metrics**: CO₂ saved, solar energy generated
-- **Performance Monitoring**: App speed, error tracking, user experience
+### Build & Deploy
+```bash
+npm run build           # Build for production
+npx vercel --prod       # Deploy to Vercel
+```
 
-## 🔐 Security & Compliance
+## Error Handling
 
-- **🛡️ Data Protection**: GDPR and CCPA compliant data handling
-- **🔒 Secure Payments**: PCI DSS compliant payment processing
-- **🔐 Authentication**: Secure user authentication and authorization
-- **📱 Device Security**: PWA security best practices
+The API uses standardized error responses:
 
-## 🤝 Contributing
+```typescript
+interface ErrorResponse {
+  success: false;
+  message: string;
+  code: "VALIDATION_ERROR" | "NOT_FOUND" | "UNAUTHORIZED" | "BAD_REQUEST" | "INTERNAL_ERROR";
+  details?: unknown;
+  requestId?: string;
+}
+```
 
-We welcome contributions to make AirBear even better! 
+Example:
+```json
+{
+  "success": false,
+  "message": "Ride not found",
+  "code": "NOT_FOUND",
+  "requestId": "abc-123"
+}
+```
 
-### Development Workflow
+## Validation
+
+PATCH endpoints use Zod schemas for validation:
+
+```typescript
+// Ride updates
+updateRideSchema: {
+  status?: "pending" | "accepted" | "in_progress" | "completed" | "cancelled",
+  driverId?: string,
+  airbearId?: string,
+  ...
+}
+
+// AirBear updates
+updateAirbearSchema: {
+  latitude?: string,
+  longitude?: string,
+  isAvailable?: boolean,
+  batteryLevel?: number,
+  ...
+}
+```
+
+## Key Features
+
+- **Triple Role System**: Admin, Driver, User roles
+- **Real-time Tracking**: GPS location updates via Supabase Realtime
+- **Interactive Map**: Leaflet.js with custom AirBear markers
+- **PWA**: Installable, offline-capable, push notifications
+- **Multi-Payment**: Stripe, Apple Pay, Google Pay, Cash QR
+- **CEO T-Shirt Promo**: $100 purchase = daily free rides
+
+## Architecture Decisions
+
+1. **PostgreSQL column names**: Uses lowercase (PostgreSQL lowercases unquoted identifiers)
+2. **Dual storage**: MemStorage for dev, Supabase for production
+3. **Field normalization**: `getField()` helper handles camelCase/snake_case/lowercase
+4. **Error handling**: Centralized `ApiError` class with typed error codes
+5. **Type safety**: Strict TypeScript, Zod validation on API boundaries
+
+## Contributing
+
 1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
+2. Create feature branch (`git checkout -b feature/name`)
+3. Commit changes (`git commit -m 'Add feature'`)
+4. Push to branch (`git push origin feature/name`)
 5. Open a Pull Request
 
-### Code Standards
-- TypeScript for type safety
-- ESLint + Prettier for code formatting
-- Conventional commits for clear history
-- Component testing with React Testing Library
+## License
 
-## 📞 Support & Contact
-
-- **🌐 Website**: [airbear.app](https://airbear.app)
-- **📧 Email**: support@airbear.app  
-- **🐦 Twitter**: [@AirBearEco](https://twitter.com/AirBearEco)
-- **💬 Discord**: [AirBear Community](https://discord.gg/airbear)
-
-## 📄 License
-
-Copyright © 2024 AirBear. All rights reserved.
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - Copyright © 2024 AirBear
 
 ---
 
-**Made with 🌱 by the AirBear team in Binghamton, NY**
-
-*"Zero emissions, infinite possibilities with AirBear's solar-powered future!"*
+**Made with 🌱 in Binghamton, NY**
