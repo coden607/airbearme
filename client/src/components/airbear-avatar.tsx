@@ -25,7 +25,7 @@ export default function AirbearAvatar({ size = "md", showBadge = true, className
     >
       <div className="absolute inset-0 bg-black/10 mix-blend-overlay" />
       <img
-        src="/airbear-mascot.png"
+        src="/mascot.png?v=2"
         alt="AirBear mascot"
         className="w-full h-full object-cover"
       />

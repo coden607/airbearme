@@ -78,7 +78,7 @@ export const AirBearMascot: React.FC<AirBearMascotProps> = React.memo(({
 
   return (
     <img
-      src="/airbear-mascot.png"
+      src="/mascot.png?v=2"
       alt="AirBear Mascot"
       className={`${sizeInfo.class} object-contain ${animationClass} ${className}`}
       onError={() => setImageError(true)}

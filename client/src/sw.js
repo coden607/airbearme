@@ -103,8 +103,8 @@ self.addEventListener('push', (event) => {
         const data = event.data.json();
         const options = {
             body: data.body,
-            icon: '/airbear-mascot.png',
-            badge: '/airbear-mascot.png',
+            icon: '/mascot.png',
+            badge: '/mascot.png',
             vibrate: [200, 100, 200],
             data: data.data || {},
             actions: data.actions || [],

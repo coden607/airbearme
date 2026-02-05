@@ -41,7 +41,7 @@ const defaultState = {
     email: 'test@example.com',
     username: 'testuser',
     fullName: 'Test User',
-    avatarUrl: '/airbear-mascot.png',
+    avatarUrl: '/mascot.png',
     role: 'user',
     ecoPoints: 100,
     totalRides: 10,

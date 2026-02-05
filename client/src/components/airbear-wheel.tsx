@@ -40,7 +40,7 @@ export const AirbearWheel: React.FC<AirbearWheelProps> = React.memo(({
         ))}
         {/* Center hub with AirBear face */}
         <div className="w-2/3 h-2/3 rounded-full bg-gradient-to-br from-amber-200 to-amber-400 border border-primary/50 flex items-center justify-center relative">
-          <img src="/airbear-mascot.png" alt="AirBear" className="w-3/4 h-3/4 object-contain" />
+          <img src="/mascot.png?v=2" alt="AirBear" className="w-3/4 h-3/4 object-contain" />
           {/* Mini wheel effect */}
           <div className="absolute inset-1 rounded-full border border-primary/30 animate-pulse opacity-60"></div>
         </div>

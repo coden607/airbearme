@@ -21,7 +21,7 @@ export default defineConfig({
         enabled: true,
         type: 'module'
       },
-      includeAssets: ['airbear-mascot.png', 'c4v-logo.svg'],
+      includeAssets: ['mascot.png', 'airbear-mascot.png', 'c4v-logo.svg'],
       manifestFilename: 'manifest.json',
       manifest: {
         name: 'AirBear - Solar Electric Ride Share',
@@ -35,13 +35,13 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'airbear-mascot.png',
+            src: 'mascot.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any maskable'
           },
           {
-            src: 'airbear-mascot.png',
+            src: 'mascot.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'
