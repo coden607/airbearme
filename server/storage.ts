@@ -75,10 +75,10 @@ const normalizeRideRow = (row: any): Ride => ({
 });
 
 // PostgreSQL lowercases unquoted identifiers, so we need lowercase versions
-const toSnakeRidePayload = (ride: Partial<InsertRide>) =>
+// Using Partial<Ride> to include both insert fields and auto-generated fields
+const toSnakeRidePayload = (ride: Partial<Ride>) =>
   stripUndefined({
     id: ride.id,
-    // Lowercase (PostgreSQL default)
     userid: ride.userId,
     driverid: ride.driverId,
     airbearid: ride.airbearId,
@@ -727,7 +727,7 @@ class SupabaseStorage implements IStorage {
 
   async updateRide(id: string, updates: Partial<Ride>): Promise<Ride> {
     // Use lowercase columns for PostgreSQL compatibility
-    const payload = toSnakeRidePayload(updates as Partial<InsertRide>);
+    const payload = toSnakeRidePayload(updates);
     const { data, error } = await this.supabase.from("rides").update(payload).eq("id", id).select().single();
     return normalizeRideRow(this.assert(data as Ride, error));
   }
