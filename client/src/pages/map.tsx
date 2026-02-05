@@ -267,8 +267,8 @@ export default function Map() {
     if (mapInstanceRef.current || !mapRef.current) return;
 
     const initMap = () => {
-      if (!window.L) {
-        console.error('Leaflet not loaded');
+      if (!window.L || !mapRef.current) {
+        console.error('Leaflet not loaded or map container not ready');
         return;
       }
 

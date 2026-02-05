@@ -86,7 +86,7 @@ const normalizeRideRow = (row: Record<string, unknown>): Ride => ({
   actualDuration: getField<number>(row, 'actualDuration', 'actual_duration', 'actualduration') ?? null,
   co2Saved: getField<string>(row, 'co2Saved', 'co2_saved', 'co2saved') ?? null,
   isFreeTshirtRide: getField<boolean>(row, 'isFreeTshirtRide', 'is_free_tshirt_ride', 'isfreetshirtride') ?? false,
-  requestedAt: getField<Date>(row, 'requestedAt', 'requested_at', 'requestedat') ?? null,
+  requestedAt: getField<Date>(row, 'requestedAt', 'requested_at', 'requestedat') ?? new Date(),
   acceptedAt: getField<Date>(row, 'acceptedAt', 'accepted_at', 'acceptedat') ?? null,
   startedAt: getField<Date>(row, 'startedAt', 'started_at', 'startedat') ?? null,
   completedAt: getField<Date>(row, 'completedAt', 'completed_at', 'completedat') ?? null,
