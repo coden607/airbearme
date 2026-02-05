@@ -9,6 +9,7 @@ import LoadingSpinner from "@/components/loading-spinner";
 import { getActiveSpots } from "@/lib/spots";
 import { useQuery } from "@tanstack/react-query";
 import AirbearAvatar from "@/components/airbear-avatar";
+import { AirBearMascot } from "@/components/airbear-mascot";
 import { MapPin, Battery, Navigation, Car, Clock, Phone } from "lucide-react";
 import { useAirbearLocationUpdates } from "@/hooks/use-driver-location";
 import { useAuth } from "@/hooks/use-auth";
@@ -279,13 +280,13 @@ export default function Map() {
         });
 
         window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap | 🐻 AirBear',
+          attribution: '© OpenStreetMap | AirBear',
           maxZoom: 19,
         }).addTo(map);
 
         // Add Binghamton label
         const label = window.L.divIcon({
-          html: '<div style="background:#10b981;color:white;padding:6px 12px;border-radius:16px;font-weight:bold;font-size:12px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.2);">🐻 Binghamton, NY</div>',
+          html: '<div style="background:#10b981;color:white;padding:6px 12px;border-radius:16px;font-weight:bold;font-size:12px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.2);display:flex;align-items:center;gap:4px;"><img src="/airbear-mascot.png" style="width:16px;height:16px;object-fit:contain;"/> Binghamton, NY</div>',
           className: '',
           iconSize: [140, 30],
           iconAnchor: [70, 15]
@@ -340,7 +341,7 @@ export default function Map() {
         html: `
           <div style="position:relative;width:44px;height:44px;">
             <div style="width:44px;height:44px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3);font-size:18px;">
-              ${hasAirbears ? '🐻' : '📍'}
+              ${hasAirbears ? '<img src="/airbear-mascot.png" style="width:24px;height:24px;object-fit:contain;"/>' : '📍'}
             </div>
             ${hasAirbears ? `<div style="position:absolute;top:-4px;right:-4px;background:#22c55e;color:white;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;border:2px solid white;">${availableHere.length}</div>` : ''}
             <div style="position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.75);color:white;padding:2px 6px;border-radius:8px;font-size:9px;white-space:nowrap;">${spot.name}</div>
@@ -387,7 +388,7 @@ export default function Map() {
         html: `
           <div style="position:relative;">
             <div style="width:${isMyDriver ? '48px' : '36px'};height:${isMyDriver ? '48px' : '36px'};border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;border:${isMyDriver ? '4px' : '2px'} solid white;box-shadow:0 ${isMyDriver ? '4' : '2'}px ${isMyDriver ? '12' : '8'}px rgba(0,0,0,${isMyDriver ? '0.4' : '0.3'});font-size:${isMyDriver ? '18px' : '14px'};${isMyDriver ? 'animation:pulse 1.5s infinite;' : ''}">
-              🐻${ab.isCharging ? '⚡' : ''}
+              <img src="/airbear-mascot.png" style="width:${isMyDriver ? '28px' : '20px'};height:${isMyDriver ? '28px' : '20px'};object-fit:contain;"/>${ab.isCharging ? '⚡' : ''}
             </div>
             ${isMyDriver ? '<div style="position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);background:#ef4444;color:white;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:bold;white-space:nowrap;">YOUR DRIVER</div>' : ''}
           </div>
@@ -587,7 +588,7 @@ export default function Map() {
           animate={{ opacity: 1, y: 0 }}
         >
           <div className="inline-flex items-center gap-2 mb-4 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-            <span className="text-xl">🐻</span>
+            <AirBearMascot size="sm" />
             <span className="text-sm font-semibold text-emerald-600">BINGHAMTON, NY</span>
           </div>
           <h1 className="text-3xl font-bold mb-2">Find Your Ride</h1>

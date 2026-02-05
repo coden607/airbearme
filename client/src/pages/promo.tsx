@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Link } from "wouter";
 import AirbearWheel from "@/components/airbear-wheel";
+import { AirBearMascot } from "@/components/airbear-mascot";
 import { useToast } from "@/hooks/use-toast";
 import { purchaseCeoTshirt } from "@/lib/stripe";
 import { useMutation } from "@tanstack/react-query";
@@ -132,7 +133,7 @@ export default function Promo() {
               <div className="space-y-4">
                 <div className="aspect-square bg-gradient-to-br from-emerald-100 to-lime-100 rounded-lg flex items-center justify-center mb-4">
                   <div className="text-center">
-                    <div className="text-6xl mb-2">🐻</div>
+                    <AirBearMascot size="2xl" className="mx-auto mb-2" />
                     <div className="text-lg font-bold text-emerald-700">AirBear</div>
                     <div className="text-sm text-emerald-600">Solar Power in the Air!</div>
                   </div>

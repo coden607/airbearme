@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { purchaseCeoTshirt } from "@/lib/stripe";
 import AirbearWheel from "./airbear-wheel";
+import { AirBearMascot } from "./airbear-mascot";
 import { 
   Crown, 
   Shirt, 
@@ -121,12 +122,12 @@ export default function CeoTshirtPromo({ isOpen, onClose }: CeoTshirtPromoProps)
                 />
                 
                 <div className="text-center relative z-10">
-                  <motion.div 
-                    className="text-6xl mb-4"
+                  <motion.div
+                    className="mb-4"
                     animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }}
                     transition={{ duration: 3, repeat: Infinity }}
                   >
-                    🐻
+                    <AirBearMascot size="2xl" className="mx-auto" />
                   </motion.div>
                   <div className="text-2xl font-bold text-emerald-700 mb-2">AirBear</div>
                   <div className="text-sm text-emerald-600 font-semibold">

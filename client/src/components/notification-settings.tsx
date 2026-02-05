@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { useToast } from "@/hooks/use-toast";
 import AirbearWheel from "@/components/airbear-wheel";
+import { AirBearMascot } from "@/components/airbear-mascot";
 import {
   Bell,
   BellOff,
@@ -252,7 +253,7 @@ export default function NotificationSettings() {
                 <div className="p-4 bg-muted/20 rounded-lg border border-primary/20">
                   <div className="flex items-center space-x-3 mb-2">
                     <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center">
-                      🐻
+                      <AirBearMascot size="sm" />
                     </div>
                     <div>
                       <p className="font-medium text-sm">AirBear Alert</p>

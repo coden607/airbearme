@@ -16,6 +16,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { getSupabaseClient } from "@/lib/supabase-client";
 import AirbearWheel from "@/components/airbear-wheel";
+import { AirBearMascot } from "@/components/airbear-mascot";
 import LoadingSpinner from "@/components/loading-spinner";
 import {
   Leaf,
@@ -200,7 +201,7 @@ export default function Dashboard() {
           <Card className="hover-lift glass-morphism cursor-pointer group" data-testid="card-book-airbear">
             <CardContent className="p-6 text-center">
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-primary/20 transition-colors group-hover:animate-bounce">
-                <div className="text-2xl group-hover:animate-spin">🐻</div>
+                <AirBearMascot size="lg" className="group-hover:animate-spin" />
               </div>
               <h3 className="font-semibold mb-2">Book AirBear</h3>
               <p className="text-sm text-muted-foreground">Find nearby eco-rides</p>
@@ -594,8 +595,8 @@ export default function Dashboard() {
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-xl">
-                              🐻
+                            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                              <AirBearMascot size="md" />
                             </div>
                             <div>
                               <div className="font-bold">{bear.id}</div>
