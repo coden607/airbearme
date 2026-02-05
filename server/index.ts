@@ -1,7 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import { registerRoutes } from "./routes.js";
-import { log, env } from "./utils.js";
+import { log, env, errorHandler } from "./utils.js";
 
 const app = express();
 app.use((req, res, next) => {
@@ -189,17 +189,8 @@ export async function createApp() {
   // Register API routes BEFORE Vite middleware
   await registerRoutes(app);
 
-  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    const requestId = res.locals.requestId as string | undefined;
-
-    // Log the error for server-side debugging
-    const prefix = requestId ? `[${requestId}] ` : "";
-    console.error(`${prefix}[Fatal Error] ${req.method} ${req.path} (${status})`, err);
-
-    res.status(status).json({ message });
-  });
+  // Centralized error handler - must be last middleware
+  app.use(errorHandler);
 
   let server;
   if (app.get("env") === "development") {

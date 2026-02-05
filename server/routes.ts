@@ -1,10 +1,10 @@
-import type { Express, Request } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { storage } from "./storage.js";
 import { insertRideSchema, insertOrderSchema, insertPaymentSchema, updateRideSchema, updateAirbearSchema } from "../shared/schema.js";
 import { z } from "zod";
 import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
 import { getActiveSpotsData } from "../shared/spots-data.js";
-import { env } from "./utils.js";
+import { env, ApiError, asyncHandler } from "./utils.js";
 
 
 const logRouteError = (req: Request, error: unknown) => {
@@ -318,46 +318,30 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
   });
 
-  app.patch("/api/rides/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const updates = updateRideSchema.parse(req.body);
+  app.patch("/api/rides/:id", asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+    const updates = updateRideSchema.parse(req.body);
 
-      // Verify ride exists before updating
-      const existingRide = await storage.getRideById(id);
-      if (!existingRide) {
-        return res.status(404).json({ message: "Ride not found" });
-      }
-
-      const ride = await storage.updateRide(id, updates);
-      res.json(ride);
-    } catch (error: any) {
-      logRouteError(req, error);
-      if (error.name === "ZodError") {
-        return res.status(400).json({ message: "Invalid update data", errors: error.errors });
-      }
-      res.status(400).json({ message: error.message });
+    // Verify ride exists before updating
+    const existingRide = await storage.getRideById(id);
+    if (!existingRide) {
+      throw ApiError.notFound("Ride");
     }
-  });
+
+    const ride = await storage.updateRide(id, updates);
+    res.json({ success: true, data: ride });
+  }));
 
   // Update airbear (for assigning drivers, updating location, etc.)
-  app.patch("/api/airbears/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const updates = updateAirbearSchema.parse(req.body);
-      const airbear = await storage.updateAirbear(id, updates);
-      if (!airbear) {
-        return res.status(404).json({ message: "Airbear not found" });
-      }
-      res.json(airbear);
-    } catch (error: any) {
-      logRouteError(req, error);
-      if (error.name === "ZodError") {
-        return res.status(400).json({ message: "Invalid update data", errors: error.errors });
-      }
-      res.status(400).json({ message: error.message });
+  app.patch("/api/airbears/:id", asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+    const updates = updateAirbearSchema.parse(req.body);
+    const airbear = await storage.updateAirbear(id, updates);
+    if (!airbear) {
+      throw ApiError.notFound("Airbear");
     }
-  });
+    res.json({ success: true, data: airbear });
+  }));
 
   // Bodega routes
   app.get("/api/bodega/items", async (req, res) => {
