@@ -23,9 +23,13 @@ type Analytics = {
 
 type Airbear = {
   id: string;
-  isAvailable: boolean;
-  isCharging: boolean;
-  batteryLevel: number;
+  // Handle both camelCase and snake_case from database
+  isAvailable?: boolean;
+  is_available?: boolean;
+  isCharging?: boolean;
+  is_charging?: boolean;
+  batteryLevel?: number;
+  battery_level?: number;
 };
 
 export default function Home() {
@@ -85,9 +89,13 @@ export default function Home() {
   });
 
   // Calculate available drivers (not charging, battery > 20%, marked available)
-  const availableDrivers = airbears?.filter(
-    (a) => a.isAvailable && !a.isCharging && a.batteryLevel > 20
-  ).length || 0;
+  // Handle both camelCase and snake_case field names from database
+  const availableDrivers = airbears?.filter((a) => {
+    const isAvailable = a.isAvailable ?? a.is_available ?? false;
+    const isCharging = a.isCharging ?? a.is_charging ?? false;
+    const batteryLevel = a.batteryLevel ?? a.battery_level ?? 0;
+    return isAvailable && !isCharging && batteryLevel > 20;
+  }).length || 0;
 
   return (
     <div className="relative">
