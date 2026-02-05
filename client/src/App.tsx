@@ -30,6 +30,8 @@ import Footer from "@/components/footer";
 import ParticleSystem from "@/components/particle-system";
 import ErrorBoundary from "@/components/error-boundary";
 import AirbearWheel from "@/components/airbear-wheel";
+import PWAInstallPrompt from "@/components/pwa-install-prompt";
+import { AirBearMascot } from "@/components/airbear-mascot";
 
 function Router() {
   return (
@@ -66,17 +68,12 @@ function Router() {
       </main>
 
       {/* Global AirBear mascot - visible on every page */}
-      <div className="fixed bottom-4 right-4 z-50 pointer-events-none">
-        <img
-          src="/airbear-mascot.png"
-          alt="AirBear mascot"
-          className="w-16 h-16 opacity-80 hover:opacity-100 transition-opacity duration-300"
-          onError={(e) => {
-            console.warn('AirBear mascot image failed to load');
-            e.currentTarget.style.display = 'none';
-          }}
-        />
+      <div className="fixed bottom-4 right-4 z-40 pointer-events-none opacity-80 hover:opacity-100 transition-opacity duration-300">
+        <AirBearMascot size="2xl" />
       </div>
+
+      {/* PWA Install Prompt */}
+      <PWAInstallPrompt />
 
       <Footer />
     </div>

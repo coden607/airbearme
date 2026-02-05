@@ -31,6 +31,21 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 
+interface BodegaItemRaw {
+  id: string;
+  name: string;
+  description: string;
+  price: string | number;
+  image_url?: string | null;
+  imageUrl?: string | null;
+  category: string;
+  is_eco_friendly?: boolean;
+  isEcoFriendly?: boolean;
+  is_available?: boolean;
+  isAvailable?: boolean;
+  stock: number;
+}
+
 interface BodegaItem {
   id: string;
   name: string;
@@ -59,7 +74,24 @@ export default function Bodega() {
   const [showSparkles, setShowSparkles] = useState<string | null>(null);
 
   const { data: items, isLoading } = useQuery<BodegaItem[]>({
-    queryKey: ["/api/bodega/items", selectedCategory === "all" ? null : selectedCategory],
+    queryKey: ["bodega-items", selectedCategory],
+    queryFn: async () => {
+      const response = await fetch('/api/bodega-items');
+      if (!response.ok) throw new Error('Failed to fetch');
+      const rawItems: BodegaItemRaw[] = await response.json();
+      // Transform snake_case to camelCase
+      return rawItems.map(item => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        price: String(item.price),
+        imageUrl: item.image_url || item.imageUrl || null,
+        category: item.category,
+        isEcoFriendly: item.is_eco_friendly ?? item.isEcoFriendly ?? false,
+        isAvailable: item.is_available ?? item.isAvailable ?? true,
+        stock: item.stock,
+      }));
+    },
   });
 
   const createOrderMutation = useMutation({
