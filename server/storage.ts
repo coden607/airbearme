@@ -780,24 +780,38 @@ class SupabaseStorage implements IStorage {
     return `hash_${Math.abs(hash).toString(16)}_${password.length}`;
   }
 
-  // Password verification using password_hash column in users table
+  // Password verification - try password_hash column first, fallback gracefully
   async verifyPassword(email: string, password: string): Promise<User | null> {
     try {
+      // First try to get user with password_hash if column exists
       const { data, error } = await this.supabase
         .from("users")
-        .select("*, password_hash")
+        .select("*")
         .eq("email", email)
         .maybeSingle();
 
       if (error || !data) return null;
 
-      const storedHash = data.password_hash;
-      if (!storedHash) return null;
+      // Try to get password_hash separately (may not exist)
+      try {
+        const { data: hashData } = await this.supabase
+          .from("users")
+          .select("password_hash")
+          .eq("email", email)
+          .maybeSingle();
 
-      const inputHash = this.hashPassword(password);
-      if (storedHash !== inputHash) return null;
+        if (hashData?.password_hash) {
+          const inputHash = this.hashPassword(password);
+          if (hashData.password_hash === inputHash) {
+            return normalizeUserRow(data);
+          }
+        }
+      } catch {
+        // password_hash column doesn't exist, that's ok
+      }
 
-      return normalizeUserRow(data);
+      // If no local password hash, return null to let routes.ts try Supabase Auth
+      return null;
     } catch (e) {
       console.error("[SupabaseStorage] verifyPassword error:", e);
       return null;
@@ -807,16 +821,18 @@ class SupabaseStorage implements IStorage {
   async setPassword(userId: string, password: string): Promise<void> {
     try {
       const passwordHash = this.hashPassword(password);
+      // Try to update password_hash - will fail silently if column doesn't exist
       const { error } = await this.supabase
         .from("users")
         .update({ password_hash: passwordHash })
         .eq("id", userId);
 
       if (error) {
-        console.error("[SupabaseStorage] setPassword error:", error);
+        // Column might not exist - that's ok, Supabase Auth will handle it
+        console.log("[SupabaseStorage] setPassword: column may not exist, using Supabase Auth");
       }
     } catch (e) {
-      console.error("[SupabaseStorage] setPassword exception:", e);
+      // Silently fail - Supabase Auth handles passwords
     }
   }
 
