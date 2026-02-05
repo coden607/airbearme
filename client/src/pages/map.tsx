@@ -23,24 +23,38 @@ interface ActiveRide {
   createdAt?: string;
 }
 
-// Minimal Leaflet type definitions for CDN-loaded library
+// Leaflet type definitions for CDN-loaded library
+// Using 'any' for complex Leaflet internals to avoid over-constraining the types
+interface LeafletLatLngBounds {
+  extend(latlng: [number, number]): LeafletLatLngBounds;
+}
+
 interface LeafletMap {
   setView(center: [number, number], zoom: number): LeafletMap;
   remove(): void;
-  fitBounds(bounds: [[number, number], [number, number]], options?: { padding: [number, number] }): void;
+  fitBounds(bounds: LeafletLatLngBounds, options?: Record<string, unknown>): void;
+  invalidateSize(): void;
+  removeLayer(layer: LeafletLayer): void;
 }
 
-interface LeafletMarker {
-  addTo(map: LeafletMap): LeafletMarker;
+interface LeafletLayer {
+  addTo(map: LeafletMap): LeafletLayer;
   remove(): void;
+}
+
+interface LeafletMarker extends LeafletLayer {
+  addTo(map: LeafletMap): LeafletMarker;
   setLatLng(latlng: [number, number]): LeafletMarker;
   bindPopup(content: string): LeafletMarker;
   on(event: string, handler: () => void): LeafletMarker;
 }
 
-interface LeafletPolyline {
+interface LeafletCircle extends LeafletLayer {
+  addTo(map: LeafletMap): LeafletCircle;
+}
+
+interface LeafletPolyline extends LeafletLayer {
   addTo(map: LeafletMap): LeafletPolyline;
-  remove(): void;
 }
 
 interface LeafletIcon {
@@ -48,11 +62,13 @@ interface LeafletIcon {
 }
 
 interface LeafletStatic {
-  map(element: HTMLElement): LeafletMap;
+  map(element: HTMLElement, options?: Record<string, unknown>): LeafletMap;
   tileLayer(url: string, options?: Record<string, unknown>): { addTo(map: LeafletMap): void };
-  marker(latlng: [number, number], options?: { icon?: LeafletIcon }): LeafletMarker;
-  polyline(latlngs: [number, number][], options?: { color?: string; weight?: number; opacity?: number; dashArray?: string }): LeafletPolyline;
+  marker(latlng: [number, number], options?: Record<string, unknown>): LeafletMarker;
+  circle(latlng: [number, number], options?: Record<string, unknown>): LeafletCircle;
+  polyline(latlngs: [number, number][], options?: Record<string, unknown>): LeafletPolyline;
   divIcon(options: { html: string; className: string; iconSize: [number, number]; iconAnchor: [number, number] }): LeafletIcon;
+  latLngBounds(latlngs: [number, number][]): LeafletLatLngBounds;
 }
 
 declare global {
@@ -123,7 +139,7 @@ export default function Map() {
   const { toast } = useToast();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<LeafletMap | null>(null);
-  const markersRef = useRef<LeafletMarker[]>([]);
+  const markersRef = useRef<LeafletLayer[]>([]);
   const routeLineRef = useRef<LeafletPolyline | null>(null);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
   const [selectedDestination, setSelectedDestination] = useState<Spot | null>(null);

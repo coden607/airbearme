@@ -13,27 +13,45 @@ import {
 const stripUndefined = <T extends Record<string, unknown>>(value: T): T =>
   Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined)) as T;
 
-const isMissingColumnError = (error: any): boolean => {
-  const message = String(error?.message ?? "");
-  return error?.code === "PGRST204" || message.includes("Could not find the") || message.includes("column");
+const isMissingColumnError = (error: unknown): boolean => {
+  const err = error as { code?: string; message?: string } | undefined;
+  const message = String(err?.message ?? "");
+  return err?.code === "PGRST204" || message.includes("Could not find the") || message.includes("column");
 };
 
-const normalizeUserRow = (row: any): User => ({
-  id: row.id,
-  email: row.email,
-  username: row.username,
-  fullName: row.fullName ?? row.full_name ?? null,
-  avatarUrl: row.avatarUrl ?? row.avatar_url ?? null,
-  role: row.role ?? "user",
-  stripeCustomerId: row.stripeCustomerId ?? row.stripe_customer_id ?? null,
-  stripeSubscriptionId: row.stripeSubscriptionId ?? row.stripe_subscription_id ?? null,
-  ecoPoints: row.ecoPoints ?? row.eco_points ?? 0,
-  totalRides: row.totalRides ?? row.total_rides ?? 0,
-  co2Saved: row.co2Saved ?? row.co2_saved ?? "0",
-  hasCeoTshirt: row.hasCeoTshirt ?? row.has_ceo_tshirt ?? false,
-  tshirtPurchaseDate: row.tshirtPurchaseDate ?? row.tshirt_purchase_date ?? null,
-  createdAt: row.createdAt ?? row.created_at ?? null,
-  updatedAt: row.updatedAt ?? row.updated_at ?? null,
+/**
+ * Multi-case field getter - handles camelCase, snake_case, and lowercase (PostgreSQL)
+ * PostgreSQL lowercases unquoted identifiers, so we need to check all three formats.
+ *
+ * @example
+ * getField(row, 'userId', 'user_id', 'userid') // Returns first non-nullish value
+ */
+function getField<T>(row: Record<string, unknown>, ...keys: string[]): T | undefined {
+  for (const key of keys) {
+    if (row[key] !== undefined && row[key] !== null) {
+      return row[key] as T;
+    }
+  }
+  return undefined;
+}
+
+// User normalization - handles camelCase and snake_case
+const normalizeUserRow = (row: Record<string, unknown>): User => ({
+  id: row.id as string,
+  email: row.email as string,
+  username: row.username as string,
+  fullName: getField<string>(row, 'fullName', 'full_name') ?? null,
+  avatarUrl: getField<string>(row, 'avatarUrl', 'avatar_url') ?? null,
+  role: (row.role as User['role']) ?? 'user',
+  stripeCustomerId: getField<string>(row, 'stripeCustomerId', 'stripe_customer_id') ?? null,
+  stripeSubscriptionId: getField<string>(row, 'stripeSubscriptionId', 'stripe_subscription_id') ?? null,
+  ecoPoints: getField<number>(row, 'ecoPoints', 'eco_points') ?? 0,
+  totalRides: getField<number>(row, 'totalRides', 'total_rides') ?? 0,
+  co2Saved: getField<string>(row, 'co2Saved', 'co2_saved') ?? '0',
+  hasCeoTshirt: getField<boolean>(row, 'hasCeoTshirt', 'has_ceo_tshirt') ?? false,
+  tshirtPurchaseDate: getField<Date>(row, 'tshirtPurchaseDate', 'tshirt_purchase_date') ?? null,
+  createdAt: getField<Date>(row, 'createdAt', 'created_at') ?? new Date(),
+  updatedAt: getField<Date>(row, 'updatedAt', 'updated_at') ?? new Date(),
 });
 
 const toSnakeUserPayload = (user: Partial<InsertUser>) =>
@@ -53,25 +71,25 @@ const toSnakeUserPayload = (user: Partial<InsertUser>) =>
     tshirt_purchase_date: user.tshirtPurchaseDate,
   });
 
-// Ride normalization helpers - handles camelCase, snake_case, and lowercase (PostgreSQL)
-const normalizeRideRow = (row: any): Ride => ({
-  id: row.id,
-  userId: row.userId ?? row.user_id ?? row.userid,
-  driverId: row.driverId ?? row.driver_id ?? row.driverid ?? null,
-  airbearId: row.airbearId ?? row.airbear_id ?? row.airbearid ?? null,
-  pickupSpotId: row.pickupSpotId ?? row.pickup_spot_id ?? row.pickupspotid,
-  dropoffSpotId: row.dropoffSpotId ?? row.dropoff_spot_id ?? row.dropoffspotid,
-  status: row.status ?? "pending",
-  fare: row.fare ?? "0",
-  distance: row.distance ?? null,
-  estimatedDuration: row.estimatedDuration ?? row.estimated_duration ?? row.estimatedduration ?? null,
-  actualDuration: row.actualDuration ?? row.actual_duration ?? row.actualduration ?? null,
-  co2Saved: row.co2Saved ?? row.co2_saved ?? row.co2saved ?? null,
-  isFreeTshirtRide: row.isFreeTshirtRide ?? row.is_free_tshirt_ride ?? row.isfreetshirtride ?? false,
-  requestedAt: row.requestedAt ?? row.requested_at ?? row.requestedat ?? null,
-  acceptedAt: row.acceptedAt ?? row.accepted_at ?? row.acceptedat ?? null,
-  startedAt: row.startedAt ?? row.started_at ?? row.startedat ?? null,
-  completedAt: row.completedAt ?? row.completed_at ?? row.completedat ?? null,
+// Ride normalization - handles camelCase, snake_case, and lowercase (PostgreSQL)
+const normalizeRideRow = (row: Record<string, unknown>): Ride => ({
+  id: row.id as string,
+  userId: getField<string>(row, 'userId', 'user_id', 'userid') ?? '',
+  driverId: getField<string>(row, 'driverId', 'driver_id', 'driverid') ?? null,
+  airbearId: getField<string>(row, 'airbearId', 'airbear_id', 'airbearid') ?? null,
+  pickupSpotId: getField<string>(row, 'pickupSpotId', 'pickup_spot_id', 'pickupspotid') ?? '',
+  dropoffSpotId: getField<string>(row, 'dropoffSpotId', 'dropoff_spot_id', 'dropoffspotid') ?? '',
+  status: (row.status as Ride['status']) ?? 'pending',
+  fare: (row.fare as string) ?? '0',
+  distance: (row.distance as string) ?? null,
+  estimatedDuration: getField<number>(row, 'estimatedDuration', 'estimated_duration', 'estimatedduration') ?? null,
+  actualDuration: getField<number>(row, 'actualDuration', 'actual_duration', 'actualduration') ?? null,
+  co2Saved: getField<string>(row, 'co2Saved', 'co2_saved', 'co2saved') ?? null,
+  isFreeTshirtRide: getField<boolean>(row, 'isFreeTshirtRide', 'is_free_tshirt_ride', 'isfreetshirtride') ?? false,
+  requestedAt: getField<Date>(row, 'requestedAt', 'requested_at', 'requestedat') ?? null,
+  acceptedAt: getField<Date>(row, 'acceptedAt', 'accepted_at', 'acceptedat') ?? null,
+  startedAt: getField<Date>(row, 'startedAt', 'started_at', 'startedat') ?? null,
+  completedAt: getField<Date>(row, 'completedAt', 'completed_at', 'completedat') ?? null,
 });
 
 // PostgreSQL lowercases unquoted identifiers, so we need lowercase versions
