@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { storage } from "./storage.js";
 import { insertRideSchema, insertOrderSchema, insertPaymentSchema, updateRideSchema, updateAirbearSchema } from "../shared/schema.js";
 import { z } from "zod";
-import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 import { getActiveSpotsData } from "../shared/spots-data.js";
 import { env, ApiError, asyncHandler } from "./utils.js";
 
@@ -20,12 +20,12 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
   // Admin client for admin operations (creating users, etc.)
   const supabaseAdmin = supabaseUrl && supabaseServiceRoleKey
-    ? createSupabaseAdminClient(supabaseUrl, supabaseServiceRoleKey, { auth: { autoRefreshToken: false } })
+    ? createClient(supabaseUrl, supabaseServiceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } })
     : null;
 
   // Regular client for auth operations (login, etc.) - uses anon key
   const supabaseAuth = supabaseUrl && supabaseAnonKey
-    ? createSupabaseAdminClient(supabaseUrl, supabaseAnonKey, { auth: { autoRefreshToken: false } })
+    ? createClient(supabaseUrl, supabaseAnonKey, { auth: { autoRefreshToken: false, persistSession: false } })
     : null;
 
   if (!supabaseAdmin) {
