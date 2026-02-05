@@ -3,10 +3,10 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
@@ -14,6 +14,7 @@ import { Moon, Sun, Menu, User, Settings, LogOut, Award, Gift, Map, Store, Troph
 import { useTheme } from "next-themes";
 import { useAuth } from "@/hooks/use-auth";
 import { motion } from "framer-motion";
+import { AirBearMascot } from "@/components/airbear-mascot";
 
 export default function Header() {
   const [location] = useLocation();
@@ -53,15 +54,7 @@ export default function Header() {
               whileTap={{ scale: 0.95 }}
               data-testid="link-logo"
             >
-              <img
-                src="/airbear-mascot.png"
-                alt="AirBear mascot"
-                className="w-10 h-10 rounded-full object-cover animate-neon-glow"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  console.warn('AirBear mascot image failed to load');
-                }}
-              />
+              <AirBearMascot size="lg" className="rounded-full animate-neon-glow" />
               <div>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 via-lime-500 to-amber-500 bg-clip-text text-transparent text-sm">
                   AirBear

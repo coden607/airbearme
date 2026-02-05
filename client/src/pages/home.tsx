@@ -5,6 +5,7 @@ import AirbearWheel from "@/components/airbear-wheel";
 import EcoImpact from "@/components/eco-impact";
 import CeoTshirtPromo from "@/components/ceo-tshirt-promo";
 import AirbearAvatar from "@/components/airbear-avatar";
+import { AirBearMascot } from "@/components/airbear-mascot";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Crown, Play, Leaf, Store, Route, Map } from "lucide-react";
@@ -92,18 +93,17 @@ export default function Home() {
         </div>
 
         <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
-          {/* Mascot Image */}
+          {/* Mascot Image - Uses fallback SVG if image fails to load */}
           <motion.div
             className="mb-8"
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.8, type: "spring" }}
+            data-testid="img-mascot"
           >
-            <img
-              src="/airbear-mascot.png"
-              alt="Friendly brown bear mascot with pilot goggles representing AirBear"
-              className="mx-auto rounded-full w-32 h-32 object-cover border-4 border-primary/30 hover-lift animate-pulse-glow"
-              data-testid="img-mascot"
+            <AirBearMascot
+              size="4xl"
+              className="mx-auto rounded-full border-4 border-primary/30 hover-lift animate-pulse-glow"
             />
           </motion.div>
 
