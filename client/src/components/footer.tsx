@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { Twitter, Instagram, Facebook, Linkedin } from "lucide-react";
+import { AirBearMascot } from "@/components/airbear-mascot";
 
 export default function Footer() {
   const quickLinks = [
@@ -30,15 +31,7 @@ export default function Footer() {
             viewport={{ once: true }}
           >
             <div className="flex items-center space-x-3 mb-6">
-              <img 
-                src="/airbear-mascot.png" 
-                alt="AirBear mascot" 
-                className="w-10 h-10 rounded-full object-cover border-2 border-white" 
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  console.warn('AirBear mascot image failed to load in footer');
-                }}
-              />
+              <AirBearMascot size="lg" className="rounded-full border-2 border-white" />
               <div>
                 <h3 className="text-2xl font-bold">AirBear</h3>
                 <p className="text-emerald-200">Solar Electric Revolution</p>
@@ -203,15 +196,7 @@ export default function Footer() {
               <span className="font-semibold">"Glide with AirBear, eco-rides so rare!"</span>
               <div className="flex items-center space-x-2">
                 <span className="text-xs">Powered by</span>
-                <img
-                  src="/airbear-mascot.png"
-                  alt="AirBear mascot"
-                  className="w-6 h-6 rounded-full object-cover border border-emerald-200 animate-spin-slow hover:animate-bounce"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    console.warn('AirBear mascot image failed to load in footer bottom');
-                  }}
-                />
+                <AirBearMascot size="sm" className="rounded-full border border-emerald-200 animate-spin-slow hover:animate-bounce" />
                 <span className="text-xs font-semibold">Solar Energy</span>
               </div>
             </div>

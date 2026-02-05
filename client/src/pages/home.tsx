@@ -14,11 +14,18 @@ import { useState } from "react";
 // Types for API responses
 type Analytics = {
   totalSpots: number;
-  totalRickshaws: number;
-  activeRickshaws: number;
-  chargingRickshaws: number;
-  maintenanceRickshaws: number;
+  totalAirbears: number;
+  activeAirbears: number;
+  chargingAirbears: number;
+  maintenanceAirbears: number;
   averageBatteryLevel: number;
+};
+
+type Airbear = {
+  id: string;
+  isAvailable: boolean;
+  isCharging: boolean;
+  batteryLevel: number;
 };
 
 export default function Home() {
@@ -38,36 +45,49 @@ export default function Home() {
     }
   });
 
+  // Fetch real-time analytics - refreshes every 30 seconds
   const { data: analytics } = useQuery<Analytics>({
     queryKey: ["analytics", "overview"],
     queryFn: async () => {
       try {
         const response = await fetch('/api/analytics/overview');
-        if (!response.ok) {
-          // Fallback to mock data if API fails
-          return {
-            totalSpots: 16,
-            totalRickshaws: 1,
-            activeRickshaws: 1,
-            chargingRickshaws: 0,
-            maintenanceRickshaws: 0,
-            averageBatteryLevel: 95
-          };
-        }
+        if (!response.ok) throw new Error('Failed to fetch');
         return await response.json();
       } catch (error) {
         console.error('Error fetching analytics:', error);
         return {
           totalSpots: 16,
-          totalRickshaws: 1,
-          activeRickshaws: 1,
-          chargingRickshaws: 0,
-          maintenanceRickshaws: 0,
-          averageBatteryLevel: 95
+          totalAirbears: 0,
+          activeAirbears: 0,
+          chargingAirbears: 0,
+          maintenanceAirbears: 0,
+          averageBatteryLevel: 0
         };
       }
-    }
+    },
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
+
+  // Fetch real-time available drivers - refreshes every 15 seconds
+  const { data: airbears } = useQuery<Airbear[]>({
+    queryKey: ["airbears", "available"],
+    queryFn: async () => {
+      try {
+        const response = await fetch('/api/airbears');
+        if (!response.ok) throw new Error('Failed to fetch');
+        return await response.json();
+      } catch (error) {
+        console.error('Error fetching airbears:', error);
+        return [];
+      }
+    },
+    refetchInterval: 15000, // Refresh every 15 seconds for real-time updates
+  });
+
+  // Calculate available drivers (not charging, battery > 20%, marked available)
+  const availableDrivers = airbears?.filter(
+    (a) => a.isAvailable && !a.isCharging && a.batteryLevel > 20
+  ).length || 0;
 
   return (
     <div className="relative">
@@ -219,14 +239,23 @@ export default function Home() {
             transition={{ duration: 0.8, delay: 0.8 }}
           >
             <div className="text-center hover-lift" data-testid="stat-rides">
-              <div className="text-2xl sm:text-3xl font-bold text-primary">
-                {analytics?.totalRickshaws || 5}
+              <div className="text-2xl sm:text-3xl font-bold text-primary flex items-center justify-center gap-1">
+                <span className={availableDrivers > 0 ? "text-green-500" : "text-gray-400"}>
+                  {availableDrivers}
+                </span>
+                {availableDrivers > 0 && (
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                )}
               </div>
-              <div className="text-sm text-muted-foreground">Active AirBears</div>
+              <div className="text-sm text-muted-foreground">
+                {availableDrivers > 0 ? "Drivers Available" : "No Drivers Online"}
+              </div>
             </div>
-            <div className="text-center hover-lift" data-testid="stat-co2">
-              <div className="text-2xl sm:text-3xl font-bold text-lime-500">582kg</div>
-              <div className="text-sm text-muted-foreground">CO₂ Saved</div>
+            <div className="text-center hover-lift" data-testid="stat-total">
+              <div className="text-2xl sm:text-3xl font-bold text-lime-500">
+                {analytics?.totalAirbears || 0}
+              </div>
+              <div className="text-sm text-muted-foreground">Total AirBears</div>
             </div>
             <div className="text-center hover-lift" data-testid="stat-spots">
               <div className="text-2xl sm:text-3xl font-bold text-amber-500">
