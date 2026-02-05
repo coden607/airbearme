@@ -895,7 +895,18 @@ class SupabaseStorage implements IStorage {
   }
 
   async createBodegaItem(item: InsertBodegaItem): Promise<BodegaItem> {
-    const { data, error } = await this.supabase.from("bodega_items").insert(item).select().single();
+    // Convert camelCase to snake_case for database
+    const dbItem = stripUndefined({
+      name: item.name,
+      description: item.description,
+      price: item.price,
+      image_url: item.imageUrl,
+      category: item.category,
+      is_eco_friendly: item.isEcoFriendly,
+      is_available: item.isAvailable ?? true,
+      stock: item.stock,
+    });
+    const { data, error } = await this.supabase.from("bodega_items").insert(dbItem).select().single();
     return this.assert(data as BodegaItem, error);
   }
 
