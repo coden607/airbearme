@@ -260,6 +260,29 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
   });
 
+  app.post("/api/bodega-items", async (req, res) => {
+    try {
+      const { name, description, price, imageUrl, category, isEcoFriendly, stock, isAvailable } = req.body;
+      if (!name || !price) {
+        return res.status(400).json({ message: "Name and price are required" });
+      }
+      const item = await storage.createBodegaItem({
+        name,
+        description: description || "",
+        price: String(price),
+        imageUrl: imageUrl || null,
+        category: category || "other",
+        isEcoFriendly: isEcoFriendly ?? false,
+        stock: stock ?? 10,
+        isAvailable: isAvailable ?? true,
+      });
+      res.json(item);
+    } catch (error: any) {
+      logRouteError(req, error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Rickshaws routes
   app.get("/api/rickshaws", async (req, res) => {
     try {
