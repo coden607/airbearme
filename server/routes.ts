@@ -183,10 +183,19 @@ export async function registerRoutes(app: Express): Promise<Express> {
         password: z.string().min(6),
       }).parse(req.body);
 
+      console.log(`[Auth] Login attempt for: ${email}`);
+
       // Try Supabase auth first if available
       if (supabaseAdmin) {
+        console.log(`[Auth] Trying Supabase auth for: ${email}`);
         const { data, error } = await supabaseAdmin.auth.signInWithPassword({ email, password });
+
+        if (error) {
+          console.log(`[Auth] Supabase auth failed: ${error.message}`);
+        }
+
         if (!error && data.user) {
+          console.log(`[Auth] Supabase auth success for: ${email}`);
           const profile = await ensureUserProfile({
             email,
             username: (data.user.user_metadata?.username as string) || email.split("@")[0],
@@ -196,20 +205,27 @@ export async function registerRoutes(app: Express): Promise<Express> {
           });
           return res.json({ user: { id: profile.id, email: profile.email, username: profile.username, role: profile.role, ecoPoints: profile.ecoPoints, totalRides: profile.totalRides, co2Saved: profile.co2Saved } });
         }
+      } else {
+        console.log(`[Auth] Supabase admin not configured, skipping Supabase auth`);
       }
 
       // Fallback to local storage auth
       if (storage.verifyPassword) {
+        console.log(`[Auth] Trying local storage auth for: ${email}`);
         const user = await storage.verifyPassword(email, password);
         if (user) {
+          console.log(`[Auth] Local storage auth success for: ${email}`);
           return res.json({ user: { id: user.id, email: user.email, username: user.username, role: user.role, ecoPoints: user.ecoPoints, totalRides: user.totalRides, co2Saved: user.co2Saved } });
         }
+        console.log(`[Auth] Local storage auth failed for: ${email}`);
       }
 
       // No valid credentials found
-      return res.status(401).json({ message: "Invalid email or password" });
+      console.log(`[Auth] All auth methods failed for: ${email}`);
+      return res.status(401).json({ message: "Invalid email or password. If you registered recently, please try again or create a new account." });
     } catch (error: any) {
       logRouteError(req, error);
+      console.error(`[Auth] Login error:`, error);
       res.status(400).json({ message: error.message });
     }
   });

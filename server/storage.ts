@@ -769,6 +769,16 @@ class SupabaseStorage implements IStorage {
     return data;
   }
 
+  // Password verification - Supabase Auth handles this, return null to let routes.ts use Supabase auth
+  async verifyPassword(_email: string, _password: string): Promise<User | null> {
+    // Supabase Auth handles password verification, this is just for interface compliance
+    return null;
+  }
+
+  async setPassword(_userId: string, _password: string): Promise<void> {
+    // Supabase Auth handles passwords, nothing to do here
+  }
+
   // Users
   async getUser(id: string): Promise<User | undefined> {
     const { data, error } = await this.supabase.from("users").select("*").eq("id", id).maybeSingle();
