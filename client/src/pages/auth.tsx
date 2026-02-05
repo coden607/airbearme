@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { assertSupabase } from "@/lib/supabase-client";
 import AirbearWheel from "@/components/airbear-wheel";
+import { AirBearMascot } from "@/components/airbear-mascot";
 import LoadingSpinner from "@/components/loading-spinner";
 import { Eye, EyeOff, Mail, Lock, User, Loader2 } from "lucide-react";
 
@@ -197,14 +198,14 @@ export default function Auth() {
         transition={{ duration: 0.8 }}
       >
         <div className="text-center">
-          <motion.div 
+          <motion.div
             className="flex justify-center mb-6"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
           >
-            <AirbearWheel size="xl" glowing className="animate-pulse-glow" />
+            <AirBearMascot size="4xl" className="rounded-full border-4 border-primary/30 shadow-2xl" />
           </motion.div>
-          
+
           <h2 className="text-3xl font-bold text-foreground">
             Welcome to <span className="eco-gradient bg-clip-text text-transparent text-outline-strong">AirBear</span>
           </h2>
