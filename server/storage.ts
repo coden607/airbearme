@@ -53,6 +53,48 @@ const toSnakeUserPayload = (user: Partial<InsertUser>) =>
     tshirt_purchase_date: user.tshirtPurchaseDate,
   });
 
+// Ride normalization helpers
+const normalizeRideRow = (row: any): Ride => ({
+  id: row.id,
+  userId: row.userId ?? row.user_id,
+  driverId: row.driverId ?? row.driver_id ?? null,
+  airbearId: row.airbearId ?? row.airbear_id ?? null,
+  pickupSpotId: row.pickupSpotId ?? row.pickup_spot_id,
+  dropoffSpotId: row.dropoffSpotId ?? row.dropoff_spot_id,
+  status: row.status ?? "pending",
+  fare: row.fare ?? "0",
+  distance: row.distance ?? null,
+  estimatedDuration: row.estimatedDuration ?? row.estimated_duration ?? null,
+  actualDuration: row.actualDuration ?? row.actual_duration ?? null,
+  co2Saved: row.co2Saved ?? row.co2_saved ?? null,
+  isFreeTshirtRide: row.isFreeTshirtRide ?? row.is_free_tshirt_ride ?? false,
+  requestedAt: row.requestedAt ?? row.requested_at ?? null,
+  acceptedAt: row.acceptedAt ?? row.accepted_at ?? null,
+  startedAt: row.startedAt ?? row.started_at ?? null,
+  completedAt: row.completedAt ?? row.completed_at ?? null,
+});
+
+const toSnakeRidePayload = (ride: Partial<InsertRide>) =>
+  stripUndefined({
+    id: ride.id,
+    user_id: ride.userId,
+    driver_id: ride.driverId,
+    airbear_id: ride.airbearId,
+    pickup_spot_id: ride.pickupSpotId,
+    dropoff_spot_id: ride.dropoffSpotId,
+    status: ride.status,
+    fare: ride.fare,
+    distance: ride.distance,
+    estimated_duration: ride.estimatedDuration,
+    actual_duration: ride.actualDuration,
+    co2_saved: ride.co2Saved,
+    is_free_tshirt_ride: ride.isFreeTshirtRide,
+    requested_at: ride.requestedAt,
+    accepted_at: ride.acceptedAt,
+    started_at: ride.startedAt,
+    completed_at: ride.completedAt,
+  });
+
 interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
@@ -658,33 +700,56 @@ class SupabaseStorage implements IStorage {
   // Rides
   async getRidesByUser(userId: string): Promise<Ride[]> {
     const { data, error } = await this.supabase.from("rides").select("*").eq("user_id", userId).order("requested_at", { ascending: false });
-    return this.assert((data ?? []) as Ride[], error);
+    const rides = this.assert((data ?? []) as any[], error);
+    return rides.map(normalizeRideRow);
   }
 
   async getRidesByDriver(driverId: string): Promise<Ride[]> {
     const { data, error } = await this.supabase.from("rides").select("*").eq("driver_id", driverId).order("requested_at", { ascending: false });
-    return this.assert((data ?? []) as Ride[], error);
+    const rides = this.assert((data ?? []) as any[], error);
+    return rides.map(normalizeRideRow);
   }
 
   async getPendingRides(): Promise<Ride[]> {
     const { data, error } = await this.supabase.from("rides").select("*").eq("status", "pending").order("requested_at", { ascending: false });
-    return this.assert((data ?? []) as Ride[], error);
+    const rides = this.assert((data ?? []) as any[], error);
+    return rides.map(normalizeRideRow);
   }
 
   async createRide(ride: InsertRide): Promise<Ride> {
-    const { data, error } = await this.supabase.from("rides").insert(ride).select().single();
-    return this.assert(data as Ride, error);
+    // Try camelCase first, then snake_case for compatibility
+    const primaryPayload = stripUndefined(ride);
+    const snakePayload = toSnakeRidePayload(ride);
+    let data;
+    let error;
+
+    ({ data, error } = await this.supabase.from("rides").insert(primaryPayload).select().single());
+    if (error && isMissingColumnError(error)) {
+      ({ data, error } = await this.supabase.from("rides").insert(snakePayload).select().single());
+    }
+
+    return normalizeRideRow(this.assert(data as Ride, error));
   }
 
   async updateRide(id: string, updates: Partial<Ride>): Promise<Ride> {
-    const { data, error } = await this.supabase.from("rides").update(updates).eq("id", id).select().single();
-    return this.assert(data as Ride, error);
+    // Try camelCase first, then snake_case for compatibility
+    const primaryPayload = stripUndefined(updates);
+    const snakePayload = toSnakeRidePayload(updates as Partial<InsertRide>);
+    let data;
+    let error;
+
+    ({ data, error } = await this.supabase.from("rides").update(primaryPayload).eq("id", id).select().single());
+    if (error && isMissingColumnError(error)) {
+      ({ data, error } = await this.supabase.from("rides").update(snakePayload).eq("id", id).select().single());
+    }
+
+    return normalizeRideRow(this.assert(data as Ride, error));
   }
 
   async getRideById(id: string): Promise<Ride | undefined> {
     const { data, error } = await this.supabase.from("rides").select("*").eq("id", id).maybeSingle();
     if (error) throw new Error(error.message);
-    return data ?? undefined;
+    return data ? normalizeRideRow(data) : undefined;
   }
 
   // Bodega Items

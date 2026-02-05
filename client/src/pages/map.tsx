@@ -137,12 +137,12 @@ export default function Map() {
         const data = await response.json();
         return data.map((item: any) => ({
           id: item.id,
-          currentSpotId: item.currentSpotId ?? item.current_spot_id ?? "",
+          currentSpotId: item.currentSpotId ?? item.current_spot_id ?? item.currentspotid ?? "",
           latitude: Number(item.latitude ?? 0),
           longitude: Number(item.longitude ?? 0),
-          batteryLevel: Number(item.batteryLevel ?? item.battery_level ?? 100),
-          isAvailable: item.isAvailable ?? item.is_available ?? false,
-          isCharging: item.isCharging ?? item.is_charging ?? false,
+          batteryLevel: Number(item.batteryLevel ?? item.battery_level ?? item.batterylevel ?? 100),
+          isAvailable: item.isAvailable ?? item.is_available ?? item.isavailable ?? false,
+          isCharging: item.isCharging ?? item.is_charging ?? item.ischarging ?? false,
         }));
       } catch {
         return [];
