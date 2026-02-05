@@ -701,19 +701,19 @@ class SupabaseStorage implements IStorage {
 
   // Rides
   async getRidesByUser(userId: string): Promise<Ride[]> {
-    const { data, error } = await this.supabase.from("rides").select("*").eq("user_id", userId).order("requested_at", { ascending: false });
+    const { data, error } = await this.supabase.from("rides").select("*").eq("userid", userId).order("requestedat", { ascending: false });
     const rides = this.assert((data ?? []) as any[], error);
     return rides.map(normalizeRideRow);
   }
 
   async getRidesByDriver(driverId: string): Promise<Ride[]> {
-    const { data, error } = await this.supabase.from("rides").select("*").eq("driver_id", driverId).order("requested_at", { ascending: false });
+    const { data, error } = await this.supabase.from("rides").select("*").eq("driverid", driverId).order("requestedat", { ascending: false });
     const rides = this.assert((data ?? []) as any[], error);
     return rides.map(normalizeRideRow);
   }
 
   async getPendingRides(): Promise<Ride[]> {
-    const { data, error } = await this.supabase.from("rides").select("*").eq("status", "pending").order("requested_at", { ascending: false });
+    const { data, error } = await this.supabase.from("rides").select("*").eq("status", "pending").order("requestedat", { ascending: false });
     const rides = this.assert((data ?? []) as any[], error);
     return rides.map(normalizeRideRow);
   }
