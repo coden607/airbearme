@@ -168,6 +168,36 @@ export const insertPaymentSchema = createInsertSchema(payments).omit({
   createdAt: true
 });
 
+// Update schemas (partial, for PATCH operations)
+// Using coerce for dates to handle both string and Date inputs
+export const updateRideSchema = z.object({
+  driverId: z.string().nullable().optional(),
+  airbearId: z.string().nullable().optional(),
+  status: z.enum(["pending", "accepted", "in_progress", "completed", "cancelled"]).optional(),
+  estimatedDuration: z.number().int().positive().nullable().optional(),
+  actualDuration: z.number().int().positive().nullable().optional(),
+  distance: z.string().nullable().optional(),
+  co2Saved: z.string().nullable().optional(),
+  fare: z.string().optional(),
+  isFreeTshirtRide: z.boolean().optional(),
+  acceptedAt: z.coerce.date().nullable().optional(),
+  startedAt: z.coerce.date().nullable().optional(),
+  completedAt: z.coerce.date().nullable().optional(),
+}).strict();
+
+export const updateAirbearSchema = z.object({
+  driverId: z.string().nullable().optional(),
+  currentSpotId: z.string().nullable().optional(),
+  latitude: z.string().nullable().optional(),
+  longitude: z.string().nullable().optional(),
+  heading: z.string().nullable().optional(),
+  batteryLevel: z.number().int().min(0).max(100).optional(),
+  isAvailable: z.boolean().optional(),
+  isCharging: z.boolean().optional(),
+  totalDistance: z.string().optional(),
+  maintenanceStatus: z.string().optional(),
+}).strict();
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;

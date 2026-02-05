@@ -1,6 +1,6 @@
 import type { Express, Request } from "express";
 import { storage } from "./storage.js";
-import { insertRideSchema, insertOrderSchema, insertPaymentSchema } from "../shared/schema.js";
+import { insertRideSchema, insertOrderSchema, insertPaymentSchema, updateRideSchema, updateAirbearSchema } from "../shared/schema.js";
 import { z } from "zod";
 import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
 import { getActiveSpotsData } from "../shared/spots-data.js";
@@ -321,11 +321,21 @@ export async function registerRoutes(app: Express): Promise<Express> {
   app.patch("/api/rides/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const updates = req.body;
+      const updates = updateRideSchema.parse(req.body);
+
+      // Verify ride exists before updating
+      const existingRide = await storage.getRideById(id);
+      if (!existingRide) {
+        return res.status(404).json({ message: "Ride not found" });
+      }
+
       const ride = await storage.updateRide(id, updates);
       res.json(ride);
     } catch (error: any) {
       logRouteError(req, error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid update data", errors: error.errors });
+      }
       res.status(400).json({ message: error.message });
     }
   });
@@ -334,7 +344,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   app.patch("/api/airbears/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const updates = req.body;
+      const updates = updateAirbearSchema.parse(req.body);
       const airbear = await storage.updateAirbear(id, updates);
       if (!airbear) {
         return res.status(404).json({ message: "Airbear not found" });
@@ -342,6 +352,9 @@ export async function registerRoutes(app: Express): Promise<Express> {
       res.json(airbear);
     } catch (error: any) {
       logRouteError(req, error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ message: "Invalid update data", errors: error.errors });
+      }
       res.status(400).json({ message: error.message });
     }
   });
