@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import AirbearWheel from "./airbear-wheel";
+import { MASCOT_DATA_URL } from "@/lib/mascot-data";
 
 interface AirbearAvatarProps {
   size?: "sm" | "md" | "lg";
@@ -25,7 +26,7 @@ export default function AirbearAvatar({ size = "md", showBadge = true, className
     >
       <div className="absolute inset-0 bg-black/10 mix-blend-overlay" />
       <img
-        src="/mascot.png?v=2"
+        src={MASCOT_DATA_URL}
         alt="AirBear mascot"
         className="w-full h-full object-cover"
       />

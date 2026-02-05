@@ -41,7 +41,7 @@ const defaultState = {
     email: 'test@example.com',
     username: 'testuser',
     fullName: 'Test User',
-    avatarUrl: '/mascot.png',
+    avatarUrl: '/mascot.png', // Keep file path for mock user avatar
     role: 'user',
     ecoPoints: 100,
     totalRides: 10,
