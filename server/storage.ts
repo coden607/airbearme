@@ -53,56 +53,48 @@ const toSnakeUserPayload = (user: Partial<InsertUser>) =>
     tshirt_purchase_date: user.tshirtPurchaseDate,
   });
 
-// Ride normalization helpers
+// Ride normalization helpers - handles camelCase, snake_case, and lowercase (PostgreSQL)
 const normalizeRideRow = (row: any): Ride => ({
   id: row.id,
-  userId: row.userId ?? row.user_id,
-  driverId: row.driverId ?? row.driver_id ?? null,
-  airbearId: row.airbearId ?? row.airbear_id ?? null,
-  pickupSpotId: row.pickupSpotId ?? row.pickup_spot_id,
-  dropoffSpotId: row.dropoffSpotId ?? row.dropoff_spot_id,
+  userId: row.userId ?? row.user_id ?? row.userid,
+  driverId: row.driverId ?? row.driver_id ?? row.driverid ?? null,
+  airbearId: row.airbearId ?? row.airbear_id ?? row.airbearid ?? null,
+  pickupSpotId: row.pickupSpotId ?? row.pickup_spot_id ?? row.pickupspotid,
+  dropoffSpotId: row.dropoffSpotId ?? row.dropoff_spot_id ?? row.dropoffspotid,
   status: row.status ?? "pending",
   fare: row.fare ?? "0",
   distance: row.distance ?? null,
-  estimatedDuration: row.estimatedDuration ?? row.estimated_duration ?? null,
-  actualDuration: row.actualDuration ?? row.actual_duration ?? null,
-  co2Saved: row.co2Saved ?? row.co2_saved ?? null,
-  isFreeTshirtRide: row.isFreeTshirtRide ?? row.is_free_tshirt_ride ?? false,
-  requestedAt: row.requestedAt ?? row.requested_at ?? null,
-  acceptedAt: row.acceptedAt ?? row.accepted_at ?? null,
-  startedAt: row.startedAt ?? row.started_at ?? null,
-  completedAt: row.completedAt ?? row.completed_at ?? null,
+  estimatedDuration: row.estimatedDuration ?? row.estimated_duration ?? row.estimatedduration ?? null,
+  actualDuration: row.actualDuration ?? row.actual_duration ?? row.actualduration ?? null,
+  co2Saved: row.co2Saved ?? row.co2_saved ?? row.co2saved ?? null,
+  isFreeTshirtRide: row.isFreeTshirtRide ?? row.is_free_tshirt_ride ?? row.isfreetshirtride ?? false,
+  requestedAt: row.requestedAt ?? row.requested_at ?? row.requestedat ?? null,
+  acceptedAt: row.acceptedAt ?? row.accepted_at ?? row.acceptedat ?? null,
+  startedAt: row.startedAt ?? row.started_at ?? row.startedat ?? null,
+  completedAt: row.completedAt ?? row.completed_at ?? row.completedat ?? null,
 });
 
+// PostgreSQL lowercases unquoted identifiers, so we need lowercase versions
 const toSnakeRidePayload = (ride: Partial<InsertRide>) =>
   stripUndefined({
     id: ride.id,
-    user_id: ride.userId,
-    driver_id: ride.driverId,
-    airbear_id: ride.airbearId,
-    pickup_spot_id: ride.pickupSpotId,
-    dropoff_spot_id: ride.dropoffSpotId,
-    // Also include camelCase versions for schemas that use them
-    userId: ride.userId,
-    driverId: ride.driverId,
-    airbearId: ride.airbearId,
-    pickupSpotId: ride.pickupSpotId,
-    dropoffSpotId: ride.dropoffSpotId,
+    // Lowercase (PostgreSQL default)
+    userid: ride.userId,
+    driverid: ride.driverId,
+    airbearid: ride.airbearId,
+    pickupspotid: ride.pickupSpotId,
+    dropoffspotid: ride.dropoffSpotId,
+    estimatedduration: ride.estimatedDuration,
+    actualduration: ride.actualDuration,
+    co2saved: ride.co2Saved,
+    isfreetshirtride: ride.isFreeTshirtRide,
+    requestedat: ride.requestedAt,
+    acceptedat: ride.acceptedAt,
+    startedat: ride.startedAt,
+    completedat: ride.completedAt,
     status: ride.status,
     fare: ride.fare,
     distance: ride.distance,
-    estimated_duration: ride.estimatedDuration,
-    actual_duration: ride.actualDuration,
-    estimatedDuration: ride.estimatedDuration,
-    actualDuration: ride.actualDuration,
-    co2_saved: ride.co2Saved,
-    co2Saved: ride.co2Saved,
-    is_free_tshirt_ride: ride.isFreeTshirtRide,
-    isFreeTshirtRide: ride.isFreeTshirtRide,
-    requested_at: ride.requestedAt,
-    accepted_at: ride.acceptedAt,
-    started_at: ride.startedAt,
-    completed_at: ride.completedAt,
   });
 
 interface IStorage {
@@ -727,32 +719,16 @@ class SupabaseStorage implements IStorage {
   }
 
   async createRide(ride: InsertRide): Promise<Ride> {
-    // Try camelCase first, then snake_case for compatibility
-    const primaryPayload = stripUndefined(ride);
-    const snakePayload = toSnakeRidePayload(ride);
-    let data;
-    let error;
-
-    ({ data, error } = await this.supabase.from("rides").insert(primaryPayload).select().single());
-    if (error && isMissingColumnError(error)) {
-      ({ data, error } = await this.supabase.from("rides").insert(snakePayload).select().single());
-    }
-
+    // Use lowercase columns for PostgreSQL compatibility (PG lowercases unquoted identifiers)
+    const payload = toSnakeRidePayload(ride);
+    const { data, error } = await this.supabase.from("rides").insert(payload).select().single();
     return normalizeRideRow(this.assert(data as Ride, error));
   }
 
   async updateRide(id: string, updates: Partial<Ride>): Promise<Ride> {
-    // Try camelCase first, then snake_case for compatibility
-    const primaryPayload = stripUndefined(updates);
-    const snakePayload = toSnakeRidePayload(updates as Partial<InsertRide>);
-    let data;
-    let error;
-
-    ({ data, error } = await this.supabase.from("rides").update(primaryPayload).eq("id", id).select().single());
-    if (error && isMissingColumnError(error)) {
-      ({ data, error } = await this.supabase.from("rides").update(snakePayload).eq("id", id).select().single());
-    }
-
+    // Use lowercase columns for PostgreSQL compatibility
+    const payload = toSnakeRidePayload(updates as Partial<InsertRide>);
+    const { data, error } = await this.supabase.from("rides").update(payload).eq("id", id).select().single();
     return normalizeRideRow(this.assert(data as Ride, error));
   }
 
