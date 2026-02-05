@@ -769,14 +769,55 @@ class SupabaseStorage implements IStorage {
     return data;
   }
 
-  // Password verification - Supabase Auth handles this, return null to let routes.ts use Supabase auth
-  async verifyPassword(_email: string, _password: string): Promise<User | null> {
-    // Supabase Auth handles password verification, this is just for interface compliance
-    return null;
+  // Simple hash function for password storage (same as MemStorage)
+  private hashPassword(password: string): string {
+    let hash = 0;
+    for (let i = 0; i < password.length; i++) {
+      const char = password.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return `hash_${Math.abs(hash).toString(16)}_${password.length}`;
   }
 
-  async setPassword(_userId: string, _password: string): Promise<void> {
-    // Supabase Auth handles passwords, nothing to do here
+  // Password verification using password_hash column in users table
+  async verifyPassword(email: string, password: string): Promise<User | null> {
+    try {
+      const { data, error } = await this.supabase
+        .from("users")
+        .select("*, password_hash")
+        .eq("email", email)
+        .maybeSingle();
+
+      if (error || !data) return null;
+
+      const storedHash = data.password_hash;
+      if (!storedHash) return null;
+
+      const inputHash = this.hashPassword(password);
+      if (storedHash !== inputHash) return null;
+
+      return normalizeUserRow(data);
+    } catch (e) {
+      console.error("[SupabaseStorage] verifyPassword error:", e);
+      return null;
+    }
+  }
+
+  async setPassword(userId: string, password: string): Promise<void> {
+    try {
+      const passwordHash = this.hashPassword(password);
+      const { error } = await this.supabase
+        .from("users")
+        .update({ password_hash: passwordHash })
+        .eq("id", userId);
+
+      if (error) {
+        console.error("[SupabaseStorage] setPassword error:", error);
+      }
+    } catch (e) {
+      console.error("[SupabaseStorage] setPassword exception:", e);
+    }
   }
 
   // Users
