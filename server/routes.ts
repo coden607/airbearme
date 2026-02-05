@@ -16,12 +16,24 @@ const logRouteError = (req: Request, error: unknown) => {
 export async function registerRoutes(app: Express): Promise<Express> {
   const supabaseUrl = env.SUPABASE_URL;
   const supabaseServiceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseAnonKey = env.SUPABASE_ANON_KEY;
+
+  // Admin client for admin operations (creating users, etc.)
   const supabaseAdmin = supabaseUrl && supabaseServiceRoleKey
     ? createSupabaseAdminClient(supabaseUrl, supabaseServiceRoleKey, { auth: { autoRefreshToken: false } })
     : null;
 
+  // Regular client for auth operations (login, etc.) - uses anon key
+  const supabaseAuth = supabaseUrl && supabaseAnonKey
+    ? createSupabaseAdminClient(supabaseUrl, supabaseAnonKey, { auth: { autoRefreshToken: false } })
+    : null;
+
   if (!supabaseAdmin) {
     console.warn("⚠️ Supabase admin client not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY for live auth.");
+  }
+
+  if (!supabaseAuth) {
+    console.warn("⚠️ Supabase auth client not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY for login.");
   }
 
   const stripeSecretKey = env.STRIPE_SECRET_KEY;
@@ -133,22 +145,42 @@ export async function registerRoutes(app: Express): Promise<Express> {
       });
       const userData = registerSchema.parse(req.body);
 
+      console.log(`[Auth] Registration attempt for: ${userData.email}`);
+
       // Check for existing user with same email
       const existingUser = await storage.getUserByEmail(userData.email);
       if (existingUser) {
         return res.status(400).json({ message: "Email already registered" });
       }
 
-      // Check for existing user with same username by trying to get by email pattern
-      // For now, skip username check since getAllUsers doesn't exist
-      // const existingUsernameUser = Array.from((await storage.getAllUsers()) || []).find(u => u.username === userData.username);
-      // if (existingUsernameUser) {
-      //   return res.status(400).json({ message: "Username already taken" });
-      // }
+      let authUserId: string | undefined;
 
-      // Create user profile directly in local storage
+      // If Supabase is available, create auth user first
+      if (supabaseAdmin) {
+        console.log(`[Auth] Creating Supabase auth user for: ${userData.email}`);
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+          email: userData.email,
+          password: userData.password,
+          email_confirm: true, // Auto-confirm email for simplicity
+          user_metadata: {
+            username: userData.username,
+            fullName: userData.fullName,
+            role: userData.role || "user",
+          },
+        });
+
+        if (authError) {
+          console.error(`[Auth] Supabase auth user creation failed:`, authError);
+          // If Supabase fails, fall back to local storage
+        } else if (authData.user) {
+          console.log(`[Auth] Supabase auth user created: ${authData.user.id}`);
+          authUserId = authData.user.id;
+        }
+      }
+
+      // Create user profile in storage
       const profile = await storage.createUser({
-        id: undefined, // Let storage generate ID
+        id: authUserId, // Use Supabase auth user ID if available
         email: userData.email || "",
         username: userData.username,
         fullName: userData.fullName ?? null,
@@ -163,11 +195,12 @@ export async function registerRoutes(app: Express): Promise<Express> {
         tshirtPurchaseDate: null
       });
 
-      // Store password for local auth
+      // Store password for local auth fallback
       if (storage.setPassword) {
         await storage.setPassword(profile.id, userData.password);
       }
 
+      console.log(`[Auth] Registration successful for: ${userData.email}, user ID: ${profile.id}`);
       res.json({ user: { id: profile.id, email: profile.email, username: profile.username, role: profile.role } });
     } catch (error: any) {
       logRouteError(req, error);
@@ -186,9 +219,9 @@ export async function registerRoutes(app: Express): Promise<Express> {
       console.log(`[Auth] Login attempt for: ${email}`);
 
       // Try Supabase auth first if available
-      if (supabaseAdmin) {
+      if (supabaseAuth) {
         console.log(`[Auth] Trying Supabase auth for: ${email}`);
-        const { data, error } = await supabaseAdmin.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabaseAuth.auth.signInWithPassword({ email, password });
 
         if (error) {
           console.log(`[Auth] Supabase auth failed: ${error.message}`);
