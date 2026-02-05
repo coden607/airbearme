@@ -1,5 +1,6 @@
 // Mock API for frontend development - Stateful & Dynamic with Persistence
 import { spots } from './spots';
+import { MASCOT_DATA_URL } from './mascot-data';
 
 // Types
 interface Rickshaw {
@@ -41,7 +42,7 @@ const defaultState = {
     email: 'test@example.com',
     username: 'testuser',
     fullName: 'Test User',
-    avatarUrl: '/mascot.png', // Keep file path for mock user avatar
+    avatarUrl: MASCOT_DATA_URL, // Embedded base64 mascot for reliability
     role: 'user',
     ecoPoints: 100,
     totalRides: 10,
