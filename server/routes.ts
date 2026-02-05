@@ -281,6 +281,29 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
   });
 
+  // Get pending rides for drivers (MUST be before /api/rides/:id)
+  app.get("/api/rides/pending", async (req, res) => {
+    try {
+      const pendingRides = await storage.getPendingRides();
+      res.json(pendingRides);
+    } catch (error: any) {
+      logRouteError(req, error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get rides assigned to a driver (MUST be before /api/rides/:id)
+  app.get("/api/rides/driver/:driverId", async (req, res) => {
+    try {
+      const { driverId } = req.params;
+      const rides = await storage.getRidesByDriver(driverId);
+      res.json(rides);
+    } catch (error: any) {
+      logRouteError(req, error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/rides/:id", async (req, res) => {
     try {
       const { id } = req.params;
@@ -304,29 +327,6 @@ export async function registerRoutes(app: Express): Promise<Express> {
     } catch (error: any) {
       logRouteError(req, error);
       res.status(400).json({ message: error.message });
-    }
-  });
-
-  // Get pending rides for drivers
-  app.get("/api/rides/pending", async (req, res) => {
-    try {
-      const pendingRides = await storage.getPendingRides();
-      res.json(pendingRides);
-    } catch (error: any) {
-      logRouteError(req, error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Get rides assigned to a driver
-  app.get("/api/rides/driver/:driverId", async (req, res) => {
-    try {
-      const { driverId } = req.params;
-      const rides = await storage.getRidesByDriver(driverId);
-      res.json(rides);
-    } catch (error: any) {
-      logRouteError(req, error);
-      res.status(500).json({ message: error.message });
     }
   });
 
