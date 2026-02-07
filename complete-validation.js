@@ -247,16 +247,18 @@ async function testMapFeatures() {
     // Check airbear properties
     const firstBear = airbears[0];
     if (firstBear) {
+      const lat = parseFloat(firstBear.latitude);
+      const lng = parseFloat(firstBear.longitude);
       const hasRequiredFields =
-        firstBear.latitude !== undefined &&
-        firstBear.longitude !== undefined &&
+        !isNaN(lat) &&
+        !isNaN(lng) &&
         firstBear.batteryLevel !== undefined &&
         firstBear.isAvailable !== undefined &&
         firstBear.heading !== undefined;
 
       if (hasRequiredFields) {
         log('✅', 'AirBear Schema: Complete with lat/lng/battery/heading', colors.green);
-        log('  📍', `  Sample: ${firstBear.latitude.toFixed(4)}, ${firstBear.longitude.toFixed(4)}`, colors.blue);
+        log('  📍', `  Sample: ${lat.toFixed(4)}, ${lng.toFixed(4)}`, colors.blue);
         log('  🔋', `  Battery: ${firstBear.batteryLevel}%`, colors.blue);
         log('  🧭', `  Heading: ${firstBear.heading}°`, colors.blue);
       } else {

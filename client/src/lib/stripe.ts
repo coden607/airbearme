@@ -44,7 +44,7 @@ export const createPaymentIntent = async (data: PaymentIntentData): Promise<Paym
   try {
     // If Stripe is not configured, return a mock payment intent for demo mode
     if (!isStripeConfigured() && data.paymentMethod !== 'cash') {
-      console.log('Demo mode: Creating mock payment intent');
+      console.log('[Stripe] Demo mode: Creating mock payment intent');
       return {
         success: true,
         paymentIntent: {
@@ -66,8 +66,8 @@ export const createPaymentIntent = async (data: PaymentIntentData): Promise<Paym
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Failed to create payment intent');
+      const errorText = await response.text().catch(() => 'Unknown error');
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
     }
 
     const result = await response.json();
@@ -87,6 +87,7 @@ export const createPaymentIntent = async (data: PaymentIntentData): Promise<Paym
     console.error("Payment Intent Error:", error);
     // Fallback to demo mode on error
     if (!isStripeConfigured()) {
+      console.warn('[Stripe] Fallback to demo mode due to configuration error:', error.message);
       return {
         success: true,
         paymentIntent: {
@@ -121,6 +122,7 @@ export const confirmPayment = async (
     });
 
     if (error) {
+      console.error('[Stripe] Payment confirmation error:', error);
       return {
         success: false,
         error: error.message || 'Payment confirmation failed',
@@ -132,6 +134,7 @@ export const confirmPayment = async (
       paymentIntent,
     };
   } catch (error: any) {
+    console.error('[Stripe] Payment confirmation exception:', error);
     return {
       success: false,
       error: error.message || 'Payment confirmation failed',
@@ -345,8 +348,8 @@ export const confirmCashPayment = async (qrCode: string, driverId: string): Prom
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Cash payment confirmation failed');
+      const errorText = await response.text().catch(() => 'Unknown error');
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
     }
 
     const result = await response.json();
@@ -384,8 +387,8 @@ export const validateFreeRide = async (userId: string): Promise<{ canRideFree: b
     const response = await fetch(`/api/users/${userId}/free-ride-status`);
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Failed to validate free ride status');
+      const errorText = await response.text().catch(() => 'Unknown error');
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
     }
 
     const result = await response.json();

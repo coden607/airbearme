@@ -66,7 +66,7 @@ try {
     }
   }
 } catch (e) {
-  console.error("Failed to load mock DB", e);
+  console.error("[MockAPI] Failed to load mock DB:", e);
 }
 
 // Persist State
@@ -74,38 +74,42 @@ const saveState = () => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (e) {
-    console.error("Failed to save mock DB", e);
+    console.error("[MockAPI] Failed to save mock DB:", e);
   }
 };
 
 // Simulation Logic
 const updateRickshawPositions = () => {
-  state.rickshaws = state.rickshaws.map(r => {
-    if (r.isCharging) return r; // Charging bears don't move
+  try {
+    state.rickshaws = state.rickshaws.map(r => {
+      if (r.isCharging) return r; // Charging bears don't move
 
-    // Random movement simulation (Random Walk)
-    const speed = 0.0001; // ~10 meters per update
-    const headingRad = r.heading * (Math.PI / 180);
+      // Random movement simulation (Random Walk)
+      const speed = 0.0001; // ~10 meters per update
+      const headingRad = r.heading * (Math.PI / 180);
 
-    // Change heading slightly
-    const newHeading = r.heading + (Math.random() * 60 - 30);
+      // Change heading slightly
+      const newHeading = r.heading + (Math.random() * 60 - 30);
 
-    // Calculate new position
-    const newLat = r.latitude + Math.cos(headingRad) * speed;
-    const newLon = r.longitude + Math.sin(headingRad) * speed * 1.5; // Longitude correction roughly
+      // Calculate new position
+      const newLat = r.latitude + Math.cos(headingRad) * speed;
+      const newLon = r.longitude + Math.sin(headingRad) * speed * 1.5; // Longitude correction roughly
 
-    // Drain battery slowly
-    const newBattery = Math.max(0, r.batteryLevel - 0.005); // Slower drain
+      // Drain battery slowly
+      const newBattery = Math.max(0, r.batteryLevel - 0.005); // Slower drain
 
-    return {
-      ...r,
-      latitude: newLat,
-      longitude: newLon,
-      batteryLevel: newBattery,
-      heading: newHeading
-    };
-  });
-  saveState(); // Save updated positions so they don't jump on reload
+      return {
+        ...r,
+        latitude: newLat,
+        longitude: newLon,
+        batteryLevel: newBattery,
+        heading: newHeading
+      };
+    });
+    saveState(); // Save updated positions so they don't jump on reload
+  } catch (error) {
+    console.error("[MockAPI] Failed to update rickshaw positions:", error);
+  }
 };
 
 // Start Simulation Loop
@@ -131,61 +135,71 @@ const mockRes = (data: any): Response => ({
 
 export const mockApi = {
   get: async (url: string) => {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 300));
+    try {
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-    if (url === '/api/spots') {
-      return mockRes(spots);
+      if (url === '/api/spots') {
+        return mockRes(spots);
+      }
+
+      if (url === '/api/rickshaws') {
+        return mockRes(state.rickshaws);
+      }
+
+      if (url === '/api/user') {
+        return mockRes(state.user);
+      }
+
+      if (url === '/api/analytics/overview') {
+        const active = state.rickshaws.filter(r => r.isAvailable).length;
+        return mockRes({
+          totalSpots: spots.length,
+          totalAirbears: state.rickshaws.length,
+          activeAirbears: active,
+          chargingAirbears: state.rickshaws.filter(r => r.isCharging).length,
+          maintenanceAirbears: 0,
+          averageBatteryLevel: Math.round(state.rickshaws.reduce((acc, r) => acc + r.batteryLevel, 0) / state.rickshaws.length)
+        });
+      }
+
+      return mockRes({});
+    } catch (error) {
+      console.error("[MockAPI] GET request failed:", { url, error });
+      return mockRes({ error: "Mock API error" });
     }
-
-    if (url === '/api/rickshaws') {
-      return mockRes(state.rickshaws);
-    }
-
-    if (url === '/api/user') {
-      return mockRes(state.user);
-    }
-
-    if (url === '/api/analytics/overview') {
-      const active = state.rickshaws.filter(r => r.isAvailable).length;
-      return mockRes({
-        totalSpots: spots.length,
-        totalAirbears: state.rickshaws.length,
-        activeAirbears: active,
-        chargingAirbears: state.rickshaws.filter(r => r.isCharging).length,
-        maintenanceAirbears: 0,
-        averageBatteryLevel: Math.round(state.rickshaws.reduce((acc, r) => acc + r.batteryLevel, 0) / state.rickshaws.length)
-      });
-    }
-
-    return mockRes({});
   },
 
   post: async (url: string, data: any) => {
-    await new Promise(resolve => setTimeout(resolve, 600)); // Longer delay for writes
+    try {
+      await new Promise(resolve => setTimeout(resolve, 600)); // Longer delay for writes
 
-    if (url === '/api/create-payment-intent') {
-      if (data.paymentMethod === 'cash') {
-        return mockRes({ qrCode: `airbear-cash-${Date.now()}` });
+      if (url === '/api/create-payment-intent') {
+        if (data.paymentMethod === 'cash') {
+          return mockRes({ qrCode: `airbear-cash-${Date.now()}` });
+        }
+        return mockRes({ clientSecret: `mock_pi_${Date.now()}_secret_${Math.random().toString(36).substr(2)}` });
       }
-      return mockRes({ clientSecret: `mock_pi_${Date.now()}_secret_${Math.random().toString(36).substr(2)}` });
-    }
 
-    if (url === '/api/rides') {
-      const newRide = { ...data, id: `ride-${Date.now()}`, status: 'booked', createdAt: new Date() };
-      state.rides.push(newRide);
-      state.user.totalRides += 1;
-      state.user.ecoPoints += 20; // Reward points
-      saveState();
-      return mockRes(newRide);
-    }
+      if (url === '/api/rides') {
+        const newRide = { ...data, id: `ride-${Date.now()}`, status: 'booked', createdAt: new Date() };
+        state.rides.push(newRide);
+        state.user.totalRides += 1;
+        state.user.ecoPoints += 20; // Reward points
+        saveState();
+        return mockRes(newRide);
+      }
 
-    if (url === '/api/auth/sync-profile') {
-      state.user = { ...state.user, ...data };
-      saveState();
-      return mockRes({ user: state.user });
-    }
+      if (url === '/api/auth/sync-profile') {
+        state.user = { ...state.user, ...data };
+        saveState();
+        return mockRes({ user: state.user });
+      }
 
-    return mockRes({ success: true });
+      return mockRes({ success: true });
+    } catch (error) {
+      console.error("[MockAPI] POST request failed:", { url, data, error });
+      return mockRes({ error: "Mock API error" });
+    }
   }
 };

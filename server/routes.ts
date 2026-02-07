@@ -142,6 +142,10 @@ export async function registerRoutes(app: Express): Promise<Express> {
         role: z.enum(["user", "driver"]).optional(),
         avatarUrl: z.string().optional().nullable(),
         password: z.string().min(6),
+        confirmPassword: z.string().min(6),
+      }).refine((data) => data.password === data.confirmPassword, {
+        message: "Passwords do not match",
+        path: ["confirmPassword"],
       });
       const userData = registerSchema.parse(req.body);
 
@@ -155,7 +159,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
       let authUserId: string | undefined;
 
-      // Simple password hash for fallback auth
+      // Simple password hash function - consistent across registration and login
       const hashPassword = (pwd: string): string => {
         let hash = 0;
         for (let i = 0; i < pwd.length; i++) {
@@ -231,7 +235,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
       console.log(`[Auth] Login attempt for: ${email}`);
 
-      // Simple password hash for verification
+      // Simple password hash function - consistent across registration and login
       const hashPassword = (pwd: string): string => {
         let hash = 0;
         for (let i = 0; i < pwd.length; i++) {
@@ -294,13 +298,11 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
       // Fallback to local storage auth
       if (storage.verifyPassword) {
-        console.log(`[Auth] Trying local storage auth for: ${email}`);
         const user = await storage.verifyPassword(email, password);
         if (user) {
           console.log(`[Auth] Local storage auth success for: ${email}`);
           return res.json({ user: { id: user.id, email: user.email, username: user.username, role: user.role, ecoPoints: user.ecoPoints, totalRides: user.totalRides, co2Saved: user.co2Saved } });
         }
-        console.log(`[Auth] Local storage auth failed for: ${email}`);
       }
 
       // No valid credentials found

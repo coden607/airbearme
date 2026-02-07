@@ -270,7 +270,7 @@ export default function Map() {
 
     const initMap = () => {
       if (!window.L || !mapRef.current) {
-        console.error('Leaflet not loaded or map container not ready');
+        console.error('[Map] Leaflet not loaded or map container not ready');
         return;
       }
 
@@ -278,11 +278,14 @@ export default function Map() {
         const map = window.L.map(mapRef.current, {
           center: [42.0987, -75.9179],
           zoom: 13,
+          zoomControl: true,
+          attributionControl: true,
         });
 
         window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap | AirBear',
           maxZoom: 19,
+          detectRetina: true,
         }).addTo(map);
 
         // Add Binghamton label
@@ -310,7 +313,7 @@ export default function Map() {
         // Recalculate size
         setTimeout(() => map.invalidateSize(), 100);
       } catch (err) {
-        console.error('Map init error:', err);
+        console.error('[Map] Map initialization error:', err);
       }
     };
 

@@ -11,7 +11,7 @@ if (!container) {
 const root = createRoot(container);
 root.render(<App />);
 
-// Version info in production console
-if (import.meta.env.PROD) {
+// Version info in development console only
+if (import.meta.env.DEV) {
   console.log(`%c🚀 AirBear Ride Share v1.3.0`, 'color: #10b981; font-weight: bold; font-size: 1.2em;');
 }

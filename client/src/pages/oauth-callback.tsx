@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
-import { assertSupabase } from "@/lib/supabase-client";
+import { getSupabaseClient } from "@/lib/supabase-client";
 import { useToast } from "@/hooks/use-toast";
 
 export default function OAuthCallback() {
@@ -11,8 +11,21 @@ export default function OAuthCallback() {
   useEffect(() => {
     const handleOAuthCallback = async () => {
       try {
+        const client = getSupabaseClient(false);
+        
+        if (!client) {
+          console.error('OAuth callback: Supabase not configured');
+          toast({
+            title: "Authentication Failed",
+            description: "Authentication service not available",
+            variant: "destructive",
+          });
+          navigate("/auth");
+          return;
+        }
+
         // Get the session from the URL hash
-        const { data, error } = await assertSupabase().auth.getSession();
+        const { data, error } = await client.auth.getSession();
         
         if (error) {
           console.error('OAuth callback error:', error);
@@ -31,7 +44,7 @@ export default function OAuthCallback() {
             description: "You have been signed in successfully",
           });
           
-          // Redirect to dashboard or home
+          // Redirect to dashboard or home based on user role
           const userRole = data.session.user.user_metadata?.role || "user";
           if (userRole === "driver") {
             navigate("/driver-dashboard");
@@ -39,12 +52,37 @@ export default function OAuthCallback() {
             navigate("/map");
           }
         } else {
-          toast({
-            title: "Authentication Failed",
-            description: "No session found",
-            variant: "destructive",
-          });
-          navigate("/auth");
+          // Try to get session from URL parameters (for OAuth redirects)
+          const { data: sessionData, error: sessionError } = await client.auth.getSession();
+          
+          if (sessionError) {
+            console.error('Session error:', sessionError);
+            toast({
+              title: "Authentication Failed",
+              description: "No session found",
+              variant: "destructive",
+            });
+            navigate("/auth");
+          } else if (sessionData.session?.user) {
+            toast({
+              title: "Authentication Successful",
+              description: "You have been signed in successfully",
+            });
+            
+            const userRole = sessionData.session.user.user_metadata?.role || "user";
+            if (userRole === "driver") {
+              navigate("/driver-dashboard");
+            } else {
+              navigate("/map");
+            }
+          } else {
+            toast({
+              title: "Authentication Failed",
+              description: "No session found",
+              variant: "destructive",
+            });
+            navigate("/auth");
+          }
         }
       } catch (error: any) {
         console.error('OAuth callback error:', error);

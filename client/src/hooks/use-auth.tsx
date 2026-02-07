@@ -79,16 +79,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (storedUser) {
             try {
               setUser(JSON.parse(storedUser));
-            } catch {
+            } catch (parseError) {
+              console.warn('[Auth] Failed to parse stored user data:', parseError);
               localStorage.removeItem("airbear-user");
             }
           }
-          console.log("Supabase not configured - running in demo mode");
+          console.log("[Auth] Supabase not configured - running in demo mode");
           return;
         }
 
         const { data, error } = await client.auth.getSession();
-        if (error) throw error;
+        if (error) {
+          console.warn('[Auth] Session fetch error:', error.message);
+          throw error;
+        }
+        
         const supabaseUser = data.session?.user;
         if (supabaseUser) {
           await syncProfile(supabaseUser);
@@ -98,7 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (storedUser) {
             try {
               setUser(JSON.parse(storedUser));
-            } catch {
+            } catch (parseError) {
+              console.warn('[Auth] Failed to parse stored user data:', parseError);
               localStorage.removeItem("airbear-user");
             }
           }
@@ -119,7 +125,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 try {
                   const parsed = JSON.parse(storedUser);
                   setUser(parsed);
-                } catch {
+                } catch (parseError) {
+                  console.warn('[Auth] Failed to parse stored user data on auth change:', parseError);
                   localStorage.removeItem("airbear-user");
                 }
               }
@@ -129,12 +136,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         cleanup = () => listener.subscription.unsubscribe();
       } catch (error: any) {
-        console.error("Supabase session fetch failed", error);
+        console.error("[Auth] Session fetch failed:", error);
+        // Fallback to localStorage if Supabase fails
+        const storedUser = localStorage.getItem("airbear-user");
+        if (storedUser) {
+          try {
+            setUser(JSON.parse(storedUser));
+          } catch (parseError) {
+            console.warn('[Auth] Failed to parse stored user data on fallback:', parseError);
+            localStorage.removeItem("airbear-user");
+          }
+        }
         // Don't show toast for configuration errors in demo mode
         if (!error.message?.includes("not configured")) {
           toast({
-            title: "Auth Error",
-            description: error.message || "Unable to verify session.",
+            title: "Auth Warning",
+            description: "Using offline mode - some features may be limited",
             variant: "destructive",
           });
         }
@@ -172,9 +189,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const client = getSupabaseClient(false);
         if (client) {
           try {
-            await client.auth.signInWithPassword({ email, password });
-          } catch {
-            // Ignore Supabase errors - we already have the user from API
+            const { error } = await client.auth.signInWithPassword({ email, password });
+            if (error) {
+              console.warn("Supabase session creation failed, but login succeeded:", error.message);
+            }
+          } catch (supabaseError) {
+            console.warn("Supabase session error, but login succeeded:", supabaseError);
           }
         }
         return;
