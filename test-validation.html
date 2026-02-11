@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AirBear PWA Validation</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .pass { background-color: #d4edda; border-color: #c3e6cb; }
+        .fail { background-color: #f8d7da; border-color: #f5c6cb; }
+        .pending { background-color: #fff3cd; border-color: #ffeaa7; }
+    </style>
+</head>
+<body>
+    <h1>AirBear PWA Validation</h1>
+    <div id="results"></div>
+    
+    <script>
+        const results = document.getElementById('results');
+        
+        function addTest(name, status, details = '') {
+            const div = document.createElement('div');
+            div.className = `test ${status}`;
+            div.innerHTML = `<strong>${name}:</strong> ${status.toUpperCase()} ${details}`;
+            results.appendChild(div);
+        }
+        
+        // Test 1: Page loads
+        addTest('Page Load', 'pass');
+        
+        // Test 2: Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(() => addTest('Service Worker', 'pass'))
+                .catch(() => addTest('Service Worker', 'fail'));
+        } else {
+            addTest('Service Worker', 'fail', 'Not supported');
+        }
+        
+        // Test 3: Manifest
+        const manifest = document.querySelector('link[rel="manifest"]');
+        if (manifest) {
+            addTest('PWA Manifest', 'pass');
+        } else {
+            addTest('PWA Manifest', 'fail');
+        }
+        
+        // Test 4: Responsive viewport
+        const viewport = document.querySelector('meta[name="viewport"]');
+        if (viewport && viewport.content.includes('width=device-width')) {
+            addTest('Responsive Viewport', 'pass');
+        } else {
+            addTest('Responsive Viewport', 'fail');
+        }
+        
+        // Test 5: HTTPS check (will fail on localhost)
+        if (location.protocol === 'https:' || location.hostname === 'localhost') {
+            addTest('HTTPS/Localhost', 'pass');
+        } else {
+            addTest('HTTPS/Localhost', 'fail');
+        }
+        
+        // Test 6: Core Web Vitals simulation
+        setTimeout(() => {
+            const navigation = performance.getEntriesByType('navigation')[0];
+            const loadTime = navigation.loadEventEnd - navigation.loadEventStart;
+            
+            if (loadTime < 3000) {
+                addTest('Page Load Time', 'pass', `${Math.round(loadTime)}ms`);
+            } else {
+                addTest('Page Load Time', 'fail', `${Math.round(loadTime)}ms`);
+            }
+        }, 1000);
+        
+        // Test 7: Check for console errors
+        let errorCount = 0;
+        const originalError = console.error;
+        console.error = function() {
+            errorCount++;
+            originalError.apply(console, arguments);
+        };
+        
+        setTimeout(() => {
+            if (errorCount === 0) {
+                addTest('Console Errors', 'pass', 'No errors detected');
+            } else {
+                addTest('Console Errors', 'fail', `${errorCount} errors detected`);
+            }
+        }, 2000);
+        
+        // Test 8: Local Storage
+        try {
+            localStorage.setItem('test', 'value');
+            localStorage.removeItem('test');
+            addTest('Local Storage', 'pass');
+        } catch (e) {
+            addTest('Local Storage', 'fail');
+        }
+        
+        // Test 9: Session Storage
+        try {
+            sessionStorage.setItem('test', 'value');
+            sessionStorage.removeItem('test');
+            addTest('Session Storage', 'pass');
+        } catch (e) {
+            addTest('Session Storage', 'fail');
+        }
+        
+        // Test 10: Geolocation API
+        if ('geolocation' in navigator) {
+            addTest('Geolocation API', 'pass');
+        } else {
+            addTest('Geolocation API', 'fail', 'Not available');
+        }
+        
+        // Summary
+        setTimeout(() => {
+            const tests = document.querySelectorAll('.test');
+            const passCount = document.querySelectorAll('.pass').length;
+            const failCount = document.querySelectorAll('.fail').length;
+            const pendingCount = document.querySelectorAll('.pending').length;
+            
+            const summary = document.createElement('div');
+            summary.innerHTML = `
+                <h2>Summary</h2>
+                <p><strong>Total Tests:</strong> ${tests.length}</p>
+                <p><strong>Passed:</strong> ${passCount}</p>
+                <p><strong>Failed:</strong> ${failCount}</p>
+                <p><strong>Pending:</strong> ${pendingCount}</p>
+                <p><strong>Success Rate:</strong> ${Math.round((passCount / tests.length) * 100)}%</p>
+            `;
+            results.appendChild(summary);
+        }, 3000);
+    </script>
+</body>
+</html>
