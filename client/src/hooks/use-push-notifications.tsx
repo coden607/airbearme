@@ -139,7 +139,8 @@ export const usePushNotifications = () => {
         body: JSON.stringify({
           subscription: subscription.toJSON(),
           preferences
-        })
+        }),
+        credentials: 'include',
       });
 
       setState(prev => ({
@@ -185,7 +186,8 @@ export const usePushNotifications = () => {
           },
           body: JSON.stringify({
             endpoint: state.subscription.endpoint
-          })
+          }),
+          credentials: 'include',
         });
 
         setState(prev => ({
@@ -231,7 +233,8 @@ export const usePushNotifications = () => {
           body: JSON.stringify({
             endpoint: state.subscription.endpoint,
             preferences: updatedPreferences
-          })
+          }),
+          credentials: 'include',
         });
       }
 
@@ -268,7 +271,8 @@ export const usePushNotifications = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        credentials: 'include',
       });
 
       toast({

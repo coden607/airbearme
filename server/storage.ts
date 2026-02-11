@@ -560,7 +560,7 @@ class MemStorage implements IStorage {
   }
 
   async getAvailableAirbears(): Promise<Airbear[]> {
-    return Array.from(this.airbears.values()).filter(a => a.isAvailable);
+    return Array.from(this.airbears.values()).filter(a => a.isAvailable && !a.isCharging && a.batteryLevel > 20);
   }
 
   async getAirbearsByDriver(driverId: string): Promise<Airbear[]> {

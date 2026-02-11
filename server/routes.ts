@@ -901,8 +901,8 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
   });
 
-  // Analytics routes (for admin dashboard)
-  app.get("/api/analytics/overview", requireAdmin, async (req, res) => {
+  // Analytics routes (public aggregate counts for home page + dashboard)
+  app.get("/api/analytics/overview", async (req, res) => {
     try {
       const spots = await storage.getAllSpots();
       const airbears = await storage.getAllAirbears();

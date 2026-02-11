@@ -52,7 +52,7 @@ export default function DriverDashboard() {
     const { data: pendingRides = [] } = useQuery({
         queryKey: ['rides', 'pending'],
         queryFn: async () => {
-            const res = await fetch('/api/rides/pending');
+            const res = await fetch('/api/rides/pending', { credentials: 'include' });
             if (!res.ok) return [];
             return res.json();
         },
@@ -64,7 +64,7 @@ export default function DriverDashboard() {
         queryKey: ['rides', 'driver', user?.id],
         queryFn: async () => {
             if (!user?.id) return [];
-            const res = await fetch(`/api/rides/driver/${user.id}`);
+            const res = await fetch(`/api/rides/driver/${user.id}`, { credentials: 'include' });
             if (!res.ok) return [];
             return res.json();
         },
@@ -85,6 +85,7 @@ export default function DriverDashboard() {
                     driverId: user?.id,
                     airbearId: assignedAirbear?.id,
                 }),
+                credentials: 'include',
             });
             if (!res.ok) throw new Error('Failed to accept ride');
             return res.json();
@@ -105,6 +106,7 @@ export default function DriverDashboard() {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: 'in_progress', startedAt: new Date().toISOString() }),
+                credentials: 'include',
             });
             if (!res.ok) throw new Error('Failed to start ride');
             return res.json();
@@ -122,6 +124,7 @@ export default function DriverDashboard() {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: 'completed', completedAt: new Date().toISOString() }),
+                credentials: 'include',
             });
             if (!res.ok) throw new Error('Failed to complete ride');
             return res.json();
@@ -146,6 +149,7 @@ export default function DriverDashboard() {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ driverId: user?.id }),
+                credentials: 'include',
             });
             if (updateRes.ok) {
                 const updated = await updateRes.json();

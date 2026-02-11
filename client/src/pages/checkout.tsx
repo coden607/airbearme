@@ -201,6 +201,7 @@ export default function Checkout() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
+        credentials: 'include',
       });
 
       if (!response.ok) {

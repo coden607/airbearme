@@ -63,6 +63,7 @@ export const createPaymentIntent = async (data: PaymentIntentData): Promise<Paym
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -345,6 +346,7 @@ export const confirmCashPayment = async (qrCode: string, driverId: string): Prom
         qrCode,
         driverId,
       }),
+      credentials: 'include',
     });
 
     if (!response.ok) {

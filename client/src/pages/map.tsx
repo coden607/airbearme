@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import LoadingSpinner from "@/components/loading-spinner";
 import { getActiveSpots } from "@/lib/spots";
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import AirbearAvatar from "@/components/airbear-avatar";
 import { AirBearMascot } from "@/components/airbear-mascot";
 import { MASCOT_DATA_URL } from "@/lib/mascot-data";
@@ -262,7 +263,8 @@ export default function Map() {
     return spotsData.filter((spot) => spot.isActive !== false);
   }, [spotsData]);
 
-  const availableAirbearsCount = airbears.filter(a => a.isAvailable).length;
+  const isAirbearAvailable = (a: any) => a.isAvailable && !a.isCharging && (a.batteryLevel ?? a.battery_level ?? 100) > 20;
+  const availableAirbearsCount = airbears.filter(isAirbearAvailable).length;
 
   // Initialize map
   useEffect(() => {
@@ -337,7 +339,7 @@ export default function Map() {
       const lng = Number(spot.longitude);
       if (isNaN(lat) || isNaN(lng)) return;
 
-      const availableHere = airbears.filter(a => a.currentSpotId === spot.id && a.isAvailable);
+      const availableHere = airbears.filter(a => a.currentSpotId === spot.id && isAirbearAvailable(a));
       const hasAirbears = availableHere.length > 0;
       const color = hasAirbears ? '#10b981' : '#6b7280';
 
@@ -473,7 +475,7 @@ export default function Map() {
     if (!selectedSpot) return { time: 0, distance: 0 };
 
     // Find nearest available airbear
-    const availableAirbears = airbears.filter(a => a.isAvailable);
+    const availableAirbears = airbears.filter(isAirbearAvailable);
     if (availableAirbears.length === 0) return { time: 5, distance: 1 }; // Default estimate
 
     let minDistance = Infinity;
@@ -523,7 +525,7 @@ export default function Map() {
     }
 
     // Find any available airbear (not just at this spot)
-    const availableAirbears = airbears.filter(a => a.isAvailable);
+    const availableAirbears = airbears.filter(isAirbearAvailable);
 
     // Pick the closest available airbear, or any if none at spot
     let selectedAirbear = availableAirbears.find(a => a.currentSpotId === selectedSpot.id);
@@ -547,20 +549,14 @@ export default function Map() {
     );
 
     try {
-      const response = await fetch('/api/rides', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id,
-          pickupSpotId: selectedSpot.id,
-          dropoffSpotId: selectedDestination.id,
-          airbearId: selectedAirbear?.id || null,
-          fare,
-          status: 'pending'
-        })
+      const response = await apiRequest('POST', '/api/rides', {
+        userId: user.id,
+        pickupSpotId: selectedSpot.id,
+        dropoffSpotId: selectedDestination.id,
+        airbearId: selectedAirbear?.id || null,
+        fare,
+        status: 'pending'
       });
-
-      if (!response.ok) throw new Error('Booking failed');
 
       const rideData = await response.json();
       const estimate = getPickupEstimate();
@@ -695,7 +691,7 @@ export default function Map() {
         {/* Spots Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {activeSpots.map((spot) => {
-            const available = airbears.filter(a => a.currentSpotId === spot.id && a.isAvailable);
+            const available = airbears.filter(a => a.currentSpotId === spot.id && isAirbearAvailable(a));
             const hasAirbears = available.length > 0;
 
             return (
@@ -787,7 +783,7 @@ export default function Map() {
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground">Available Drivers</div>
-                      <div className="font-bold text-emerald-600">{airbears.filter(a => a.isAvailable).length}</div>
+                      <div className="font-bold text-emerald-600">{availableAirbearsCount}</div>
                     </div>
                   </div>
                 </div>
@@ -795,8 +791,15 @@ export default function Map() {
 
               <div className="p-4 bg-muted rounded-lg">
                 <div className="flex justify-between mb-2">
-                  <span>Flat Rate Fare</span>
-                  <span className="font-bold text-emerald-600">$4.00</span>
+                  <span>Estimated Fare</span>
+                  <span className="font-bold text-emerald-600">
+                    ${selectedSpot && selectedDestination
+                      ? calculateFare(
+                          Number(selectedSpot.latitude), Number(selectedSpot.longitude),
+                          Number(selectedDestination.latitude), Number(selectedDestination.longitude)
+                        )
+                      : '4.00'}
+                  </span>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Solar-powered • Zero emissions • Supports local economy
@@ -806,9 +809,9 @@ export default function Map() {
               <Button
                 className="w-full bg-emerald-500 hover:bg-emerald-600"
                 onClick={handleBookRide}
-                disabled={!selectedSpot || !selectedDestination || airbears.filter(a => a.isAvailable).length === 0}
+                disabled={!selectedSpot || !selectedDestination || availableAirbearsCount === 0}
               >
-                {airbears.filter(a => a.isAvailable).length === 0 ? 'No Drivers Available' : 'Confirm Booking'}
+                {availableAirbearsCount === 0 ? 'No Drivers Available' : 'Confirm Booking'}
               </Button>
             </div>
           </DialogContent>
