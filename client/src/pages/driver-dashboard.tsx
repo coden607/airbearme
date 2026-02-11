@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useDriverLocation } from '@/hooks/use-driver-location';
 import { Navigation, Battery, MapPin, Activity, Clock, Car, CheckCircle } from 'lucide-react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { authFetch } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
 interface Spot {
@@ -52,7 +53,7 @@ export default function DriverDashboard() {
     const { data: pendingRides = [] } = useQuery({
         queryKey: ['rides', 'pending'],
         queryFn: async () => {
-            const res = await fetch('/api/rides/pending', { credentials: 'include' });
+            const res = await authFetch('/api/rides/pending');
             if (!res.ok) return [];
             return res.json();
         },
@@ -64,7 +65,7 @@ export default function DriverDashboard() {
         queryKey: ['rides', 'driver', user?.id],
         queryFn: async () => {
             if (!user?.id) return [];
-            const res = await fetch(`/api/rides/driver/${user.id}`, { credentials: 'include' });
+            const res = await authFetch(`/api/rides/driver/${user.id}`);
             if (!res.ok) return [];
             return res.json();
         },
@@ -77,7 +78,7 @@ export default function DriverDashboard() {
     // Accept ride mutation
     const acceptRideMutation = useMutation({
         mutationFn: async (rideId: string) => {
-            const res = await fetch(`/api/rides/${rideId}`, {
+            const res = await authFetch(`/api/rides/${rideId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -85,7 +86,6 @@ export default function DriverDashboard() {
                     driverId: user?.id,
                     airbearId: assignedAirbear?.id,
                 }),
-                credentials: 'include',
             });
             if (!res.ok) throw new Error('Failed to accept ride');
             return res.json();
@@ -102,11 +102,10 @@ export default function DriverDashboard() {
     // Start ride mutation
     const startRideMutation = useMutation({
         mutationFn: async (rideId: string) => {
-            const res = await fetch(`/api/rides/${rideId}`, {
+            const res = await authFetch(`/api/rides/${rideId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: 'in_progress', startedAt: new Date().toISOString() }),
-                credentials: 'include',
             });
             if (!res.ok) throw new Error('Failed to start ride');
             return res.json();
@@ -120,11 +119,10 @@ export default function DriverDashboard() {
     // Complete ride mutation
     const completeRideMutation = useMutation({
         mutationFn: async (rideId: string) => {
-            const res = await fetch(`/api/rides/${rideId}`, {
+            const res = await authFetch(`/api/rides/${rideId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: 'completed', completedAt: new Date().toISOString() }),
-                credentials: 'include',
             });
             if (!res.ok) throw new Error('Failed to complete ride');
             return res.json();
@@ -145,11 +143,10 @@ export default function DriverDashboard() {
                 toast({ title: "No Available Vehicles", description: "All AirBears are currently assigned.", variant: 'destructive' });
                 return;
             }
-            const updateRes = await fetch(`/api/airbears/${available.id}`, {
+            const updateRes = await authFetch(`/api/airbears/${available.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ driverId: user?.id }),
-                credentials: 'include',
             });
             if (updateRes.ok) {
                 const updated = await updateRes.json();

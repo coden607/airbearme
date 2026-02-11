@@ -906,9 +906,17 @@ export async function registerRoutes(app: Express): Promise<Express> {
     try {
       const spots = await storage.getAllSpots();
       const airbears = await storage.getAllAirbears();
-      const activeAirbears = airbears.filter(a => a.isAvailable && !a.isCharging);
-      const chargingAirbears = airbears.filter(a => a.isCharging);
-      const maintenanceAirbears = airbears.filter(a => a.maintenanceStatus !== "good");
+
+      // Handle both camelCase (MemStorage) and snake_case (Supabase) field names
+      const getField = (a: any, camel: string, snake: string) => a[camel] ?? a[snake];
+      const isAvailable = (a: any) => getField(a, 'isAvailable', 'is_available') === true;
+      const isCharging = (a: any) => getField(a, 'isCharging', 'is_charging') === true;
+      const batteryLevel = (a: any) => getField(a, 'batteryLevel', 'battery_level') ?? 0;
+      const maintenanceStatus = (a: any) => getField(a, 'maintenanceStatus', 'maintenance_status') ?? 'good';
+
+      const activeAirbears = airbears.filter(a => isAvailable(a) && !isCharging(a));
+      const chargingAirbears = airbears.filter(a => isCharging(a));
+      const maintenanceAirbears = airbears.filter(a => maintenanceStatus(a) !== "good");
 
       const analytics = {
         totalSpots: spots.length,
@@ -917,7 +925,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
         chargingAirbears: chargingAirbears.length,
         maintenanceAirbears: maintenanceAirbears.length,
         averageBatteryLevel: airbears.length > 0
-          ? Math.round(airbears.reduce((sum, a) => sum + a.batteryLevel, 0) / airbears.length)
+          ? Math.round(airbears.reduce((sum, a) => sum + (Number(batteryLevel(a)) || 0), 0) / airbears.length)
           : 0
       };
 

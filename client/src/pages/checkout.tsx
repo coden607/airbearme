@@ -195,13 +195,13 @@ export default function Checkout() {
 
   const createPaymentIntentMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await fetch('/api/create-payment-intent', {
+      const { authFetch } = await import('@/lib/queryClient');
+      const response = await authFetch('/api/create-payment-intent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
-        credentials: 'include',
       });
 
       if (!response.ok) {

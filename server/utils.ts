@@ -139,42 +139,75 @@ export function asyncHandler(
   };
 }
 
-// Auth middleware: rejects requests without a valid session
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  if (!req.session?.userId) {
-    const err = ApiError.unauthorized();
-    const response: ErrorResponse = {
-      success: false,
-      message: err.message,
-      code: err.code,
+// Verify Supabase JWT from Authorization header
+// Returns { userId, role } or null
+async function verifySupabaseToken(req: Request): Promise<{ userId: string; role: string } | null> {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) return null;
+
+  const token = authHeader.slice(7);
+  const supabaseUrl = env.SUPABASE_URL;
+  const supabaseServiceKey = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !supabaseServiceKey) return null;
+
+  try {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data.user) return null;
+    return {
+      userId: data.user.id,
+      role: (data.user.user_metadata?.role as string) || "user",
     };
-    res.status(401).json(response);
-    return;
+  } catch {
+    return null;
   }
-  next();
+}
+
+// Auth middleware: checks session first, then Supabase JWT
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  // 1. Check session (works in local dev / persistent servers)
+  if (req.session?.userId) {
+    return next();
+  }
+
+  // 2. Check Supabase JWT (works on Vercel serverless)
+  const tokenAuth = await verifySupabaseToken(req);
+  if (tokenAuth) {
+    // Populate session-like data on request for downstream use
+    (req as any).userId = tokenAuth.userId;
+    (req as any).userRole = tokenAuth.role;
+    return next();
+  }
+
+  const err = ApiError.unauthorized();
+  res.status(401).json({ success: false, message: err.message, code: err.code } as ErrorResponse);
 }
 
 // Admin middleware: requires auth + admin role
-export function requireAdmin(req: Request, res: Response, next: NextFunction) {
-  if (!req.session?.userId) {
-    const err = ApiError.unauthorized();
-    const response: ErrorResponse = {
-      success: false,
-      message: err.message,
-      code: err.code,
-    };
-    res.status(401).json(response);
-    return;
+export async function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  // 1. Check session
+  if (req.session?.userId) {
+    if (req.session.userRole !== "admin") {
+      res.status(403).json({ success: false, message: "Access denied", code: "FORBIDDEN" } as ErrorResponse);
+      return;
+    }
+    return next();
   }
-  if (req.session.userRole !== "admin") {
-    const err = ApiError.forbidden();
-    const response: ErrorResponse = {
-      success: false,
-      message: err.message,
-      code: err.code,
-    };
-    res.status(403).json(response);
-    return;
+
+  // 2. Check Supabase JWT
+  const tokenAuth = await verifySupabaseToken(req);
+  if (tokenAuth) {
+    if (tokenAuth.role !== "admin") {
+      res.status(403).json({ success: false, message: "Access denied", code: "FORBIDDEN" } as ErrorResponse);
+      return;
+    }
+    (req as any).userId = tokenAuth.userId;
+    (req as any).userRole = tokenAuth.role;
+    return next();
   }
-  next();
+
+  res.status(401).json({ success: false, message: "Authentication required", code: "UNAUTHORIZED" } as ErrorResponse);
 }

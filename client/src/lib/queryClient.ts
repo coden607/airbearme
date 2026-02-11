@@ -1,4 +1,21 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { getSupabaseClient } from "./supabase-client";
+
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {};
+  try {
+    const supabase = getSupabaseClient(false);
+    if (supabase) {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.access_token) {
+        headers["Authorization"] = `Bearer ${data.session.access_token}`;
+      }
+    }
+  } catch {
+    // Supabase not configured - rely on session cookies
+  }
+  return headers;
+}
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -23,9 +40,13 @@ export async function apiRequest(
   data?: unknown | undefined,
 ): Promise<Response> {
   try {
+    const authHeaders = await getAuthHeaders();
     const res = await fetch(url, {
       method,
-      headers: data ? { "Content-Type": "application/json" } : {},
+      headers: {
+        ...(data ? { "Content-Type": "application/json" } : {}),
+        ...authHeaders,
+      },
       body: data ? JSON.stringify(data) : undefined,
       credentials: "include",
     });
@@ -45,8 +66,10 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
     async ({ queryKey }) => {
       try {
+        const authHeaders = await getAuthHeaders();
         const res = await fetch(queryKey.join("/") as string, {
           credentials: "include",
+          headers: authHeaders,
         });
 
         if (unauthorizedBehavior === "returnNull" && res.status === 401) {
@@ -60,6 +83,19 @@ export const getQueryFn: <T>(options: {
         throw error;
       }
     };
+
+// Authenticated fetch wrapper - use this instead of raw fetch() for protected routes
+export async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const authHeaders = await getAuthHeaders();
+  return fetch(url, {
+    ...options,
+    credentials: "include",
+    headers: {
+      ...options.headers,
+      ...authHeaders,
+    },
+  });
+}
 
 export const queryClient = new QueryClient({
   defaultOptions: {

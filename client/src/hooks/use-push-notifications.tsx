@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { authFetch } from '@/lib/queryClient';
 import { useToast } from './use-toast';
 
 interface PushNotificationState {
@@ -131,7 +132,7 @@ export const usePushNotifications = () => {
       });
 
       // Send subscription to your backend
-      await fetch('/api/push-subscriptions', {
+      await authFetch('/api/push-subscriptions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -140,7 +141,6 @@ export const usePushNotifications = () => {
           subscription: subscription.toJSON(),
           preferences
         }),
-        credentials: 'include',
       });
 
       setState(prev => ({
@@ -179,7 +179,7 @@ export const usePushNotifications = () => {
 
       if (success) {
         // Notify backend to remove subscription
-        await fetch('/api/push-subscriptions', {
+        await authFetch('/api/push-subscriptions', {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
@@ -187,7 +187,6 @@ export const usePushNotifications = () => {
           body: JSON.stringify({
             endpoint: state.subscription.endpoint
           }),
-          credentials: 'include',
         });
 
         setState(prev => ({
@@ -225,7 +224,7 @@ export const usePushNotifications = () => {
       setPreferences(updatedPreferences);
 
       if (state.subscription) {
-        await fetch('/api/push-subscriptions', {
+        await authFetch('/api/push-subscriptions', {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -234,7 +233,6 @@ export const usePushNotifications = () => {
             endpoint: state.subscription.endpoint,
             preferences: updatedPreferences
           }),
-          credentials: 'include',
         });
       }
 
@@ -267,12 +265,11 @@ export const usePushNotifications = () => {
     }
 
     try {
-      await fetch('/api/notifications/test', {
+      await authFetch('/api/notifications/test', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
       });
 
       toast({

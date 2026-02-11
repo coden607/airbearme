@@ -1,4 +1,5 @@
 import { loadStripe, Stripe } from '@stripe/stripe-js';
+import { authFetch } from './queryClient';
 
 const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
 
@@ -57,13 +58,12 @@ export const createPaymentIntent = async (data: PaymentIntentData): Promise<Paym
       };
     }
 
-    const response = await fetch('/api/create-payment-intent', {
+    const response = await authFetch('/api/create-payment-intent', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
-      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -337,7 +337,7 @@ export const generateCashQRCode = async (data: PaymentIntentData): Promise<Payme
 
 export const confirmCashPayment = async (qrCode: string, driverId: string): Promise<PaymentResult> => {
   try {
-    const response = await fetch('/api/payments/confirm-cash', {
+    const response = await authFetch('/api/payments/confirm-cash', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -346,7 +346,6 @@ export const confirmCashPayment = async (qrCode: string, driverId: string): Prom
         qrCode,
         driverId,
       }),
-      credentials: 'include',
     });
 
     if (!response.ok) {
