@@ -96,14 +96,12 @@ export default function Footer() {
             <ul className="space-y-3">
               {quickLinks.map((link) => (
                 <li key={link.name}>
-                  <Link to={link.href}>
-                    <motion.a 
-                      className="text-emerald-200 hover:text-white transition-colors cursor-pointer"
-                      whileHover={{ x: 5 }}
-                      data-testid={`footer-link-${link.name.toLowerCase().replace(/\s+/g, '-')}`}
-                    >
-                      {link.name}
-                    </motion.a>
+                  <Link
+                    to={link.href}
+                    className="text-emerald-200 hover:text-white transition-colors cursor-pointer inline-block hover:translate-x-1"
+                    data-testid={`footer-link-${link.name.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    {link.name}
                   </Link>
                 </li>
               ))}
@@ -121,14 +119,12 @@ export default function Footer() {
             <ul className="space-y-3">
               {supportLinks.map((link) => (
                 <li key={link.name}>
-                  <Link to={link.href}>
-                    <motion.a 
-                      className="text-emerald-200 hover:text-white transition-colors cursor-pointer"
-                      whileHover={{ x: 5 }}
-                      data-testid={`footer-support-${link.name.toLowerCase().replace(/\s+/g, '-')}`}
-                    >
-                      {link.name}
-                    </motion.a>
+                  <Link
+                    to={link.href}
+                    className="text-emerald-200 hover:text-white transition-colors cursor-pointer inline-block hover:translate-x-1"
+                    data-testid={`footer-support-${link.name.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    {link.name}
                   </Link>
                 </li>
               ))}

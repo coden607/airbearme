@@ -92,7 +92,7 @@ start_server() {
     # Wait for server to start
     print_status "Waiting for server to start..."
     for i in {1..30}; do
-        if curl -s http://localhost:3000 > /dev/null 2>&1; then
+        if curl -s http://localhost:5000 > /dev/null 2>&1; then
             print_status "✅ Server started successfully (PID: $SERVER_PID)"
             return 0
         fi
@@ -135,7 +135,7 @@ run_lighthouse_tests() {
     mkdir -p test-results/lighthouse
     
     # Run Lighthouse audit
-    lighthouse http://localhost:3000 \
+    lighthouse http://localhost:5000 \
         --output=json \
         --output-path=./test-results/lighthouse/report.json \
         --chrome-flags="--headless" \

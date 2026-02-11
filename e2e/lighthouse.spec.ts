@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { execSync } from 'child_process';
 
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = 'http://localhost:5000';
 
 test.describe('AirBear PWA - Lighthouse Performance Tests', () => {
   test.beforeAll(async () => {

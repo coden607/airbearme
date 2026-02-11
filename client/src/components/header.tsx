@@ -199,29 +199,27 @@ export default function Header() {
                   {/* Mobile Navigation */}
                   <nav className="flex flex-col space-y-4">
                     {navigation.map((item) => (
-                      <Link key={item.name} to={item.href}>
-                        <motion.a
-                          className={`flex items-center space-x-3 text-foreground/80 hover:text-primary transition-colors p-2 rounded-lg hover:bg-muted ${
-                            isActive(item.href) ? "text-primary bg-primary/10 font-medium" : ""
-                          }`}
-                          onClick={(e) => {
-                            setMobileMenuOpen(false);
-                            if ('scrollTo' in item) {
-                              e.preventDefault();
-                              setTimeout(() => {
-                                const element = document.getElementById((item as any).scrollTo);
-                                if (element) {
-                                  element.scrollIntoView({ behavior: 'smooth' });
-                                }
-                              }, 300);
-                            }
-                          }}
-                          whileTap={{ scale: 0.95 }}
-                          data-testid={`mobile-link-${item.name.toLowerCase()}`}
-                        >
-                          <item.Icon className="h-5 w-5" />
-                          <span className="text-lg">{item.name}</span>
-                        </motion.a>
+                      <Link
+                        key={item.name}
+                        to={item.href}
+                        className={`flex items-center space-x-3 text-foreground/80 hover:text-primary transition-colors p-2 rounded-lg hover:bg-muted active:scale-95 ${
+                          isActive(item.href) ? "text-primary bg-primary/10 font-medium" : ""
+                        }`}
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          if ('scrollTo' in item) {
+                            setTimeout(() => {
+                              const element = document.getElementById((item as any).scrollTo);
+                              if (element) {
+                                element.scrollIntoView({ behavior: 'smooth' });
+                              }
+                            }, 300);
+                          }
+                        }}
+                        data-testid={`mobile-link-${item.name.toLowerCase()}`}
+                      >
+                        <item.Icon className="h-5 w-5" />
+                        <span className="text-lg">{item.name}</span>
                       </Link>
                     ))}
                   </nav>

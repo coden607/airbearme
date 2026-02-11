@@ -59,7 +59,7 @@ start_preview_server() {
     # Wait for server to start
     print_status "Waiting for server to start..."
     for i in {1..15}; do
-        if curl -s http://localhost:3000 > /dev/null 2>&1; then
+        if curl -s http://localhost:5000 > /dev/null 2>&1; then
             print_status "✅ Server started successfully (PID: $SERVER_PID)"
             return 0
         fi
@@ -227,7 +227,7 @@ run_lighthouse_simple() {
     # Try to run Lighthouse if available
     if command -v lighthouse &> /dev/null; then
         mkdir -p test-results
-        lighthouse http://localhost:3000 \
+        lighthouse http://localhost:5000 \
             --output=json \
             --output-path=./test-results/lighthouse.json \
             --chrome-flags="--headless" \
@@ -275,7 +275,7 @@ generate_simple_report() {
 Since of Node.js version constraints, please manually test:
 
 1. **User Registration & Login**
-   - Visit http://localhost:3000
+   - Visit http://localhost:5000
    - Test user signup and login flows
 
 2. **Driver Registration & Login**  
@@ -298,7 +298,7 @@ Since of Node.js version constraints, please manually test:
 
 ## Server Information
 
-- Preview server running on: http://localhost:3000
+- Preview server running on: http://localhost:5000
 - Test page available: test-validation.html
 - Server log: server.log
 
@@ -330,7 +330,7 @@ main() {
     generate_simple_report
     
     print_status "🎉 Simple validation completed!"
-    print_status "📊 Open http://localhost:3000/test-validation.html in your browser"
+    print_status "📊 Open http://localhost:5000/test-validation.html in your browser"
     print_status "📋 Check SIMPLE-VALIDATION-REPORT.md for details"
 }
 

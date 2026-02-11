@@ -17,7 +17,7 @@
 Since of Node.js version constraints, please manually test:
 
 1. **User Registration & Login**
-   - Visit http://localhost:3000
+   - Visit http://localhost:5000
    - Test user signup and login flows
 
 2. **Driver Registration & Login**  
@@ -40,7 +40,7 @@ Since of Node.js version constraints, please manually test:
 
 ## Server Information
 
-- Preview server running on: http://localhost:3000
+- Preview server running on: http://localhost:5000
 - Test page available: test-validation.html
 - Server log: server.log
 
