@@ -229,11 +229,12 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
       console.log(`[Auth] Login attempt for: ${email}`);
 
-      // Try Supabase auth first if available
-      if (supabaseAdmin && supabaseAuth) {
+      // Try Supabase auth first if available (use anon client, fallback to admin for verification)
+      const authClient = supabaseAuth || supabaseAdmin;
+      if (authClient) {
         console.log(`[Auth] Trying Supabase auth for: ${email}`);
         try {
-          const { data, error } = await supabaseAuth.auth.signInWithPassword({ email, password });
+          const { data, error } = await authClient.auth.signInWithPassword({ email, password });
 
           if (!error && data.user) {
             console.log(`[Auth] Supabase signIn success for: ${email}`);

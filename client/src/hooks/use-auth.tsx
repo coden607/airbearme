@@ -156,7 +156,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Try API login first (works with both Supabase and local storage)
+      // Sign in with Supabase client first to get JWT (needed for API auth on serverless)
+      const client = getSupabaseClient(false);
+      if (client) {
+        try {
+          const { error } = await client.auth.signInWithPassword({ email, password });
+          if (error) {
+            console.log("[Auth] Supabase client signIn failed:", error.message);
+          }
+        } catch (e) {
+          console.warn("[Auth] Supabase client signIn exception:", e);
+        }
+      }
+
+      // Then call API login (sets session cookie for non-serverless, returns user data)
       const response = await apiRequest("POST", "/api/auth/login", { email, password });
 
       if (response.ok) {
