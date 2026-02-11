@@ -1,5 +1,13 @@
 import type { Request, Response, NextFunction } from "express";
 
+// Extend express-session with our custom fields
+declare module "express-session" {
+  interface SessionData {
+    userId: string;
+    userRole: string;
+  }
+}
+
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -129,4 +137,44 @@ export function asyncHandler(
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
+}
+
+// Auth middleware: rejects requests without a valid session
+export function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.session?.userId) {
+    const err = ApiError.unauthorized();
+    const response: ErrorResponse = {
+      success: false,
+      message: err.message,
+      code: err.code,
+    };
+    res.status(401).json(response);
+    return;
+  }
+  next();
+}
+
+// Admin middleware: requires auth + admin role
+export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!req.session?.userId) {
+    const err = ApiError.unauthorized();
+    const response: ErrorResponse = {
+      success: false,
+      message: err.message,
+      code: err.code,
+    };
+    res.status(401).json(response);
+    return;
+  }
+  if (req.session.userRole !== "admin") {
+    const err = ApiError.forbidden();
+    const response: ErrorResponse = {
+      success: false,
+      message: err.message,
+      code: err.code,
+    };
+    res.status(403).json(response);
+    return;
+  }
+  next();
 }

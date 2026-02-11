@@ -4,7 +4,8 @@ import { insertRideSchema, insertOrderSchema, insertPaymentSchema, updateRideSch
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { getActiveSpotsData } from "../shared/spots-data.js";
-import { env, ApiError, asyncHandler } from "./utils.js";
+import { env, ApiError, asyncHandler, requireAuth, requireAdmin } from "./utils.js";
+import bcrypt from "bcryptjs";
 
 
 const logRouteError = (req: Request, error: unknown) => {
@@ -159,17 +160,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
       let authUserId: string | undefined;
 
-      // Simple password hash function - consistent across registration and login
-      const hashPassword = (pwd: string): string => {
-        let hash = 0;
-        for (let i = 0; i < pwd.length; i++) {
-          const char = pwd.charCodeAt(i);
-          hash = ((hash << 5) - hash) + char;
-          hash = hash & hash;
-        }
-        return `hash_${Math.abs(hash).toString(16)}_${pwd.length}`;
-      };
-      const passwordHash = hashPassword(userData.password);
+      const passwordHash = await bcrypt.hash(userData.password, 10);
 
       // If Supabase is available, create auth user first
       if (supabaseAdmin) {
@@ -182,7 +173,6 @@ export async function registerRoutes(app: Express): Promise<Express> {
             username: userData.username,
             fullName: userData.fullName,
             role: userData.role || "user",
-            password_hash: passwordHash, // Store hash for fallback verification
           },
         });
 
@@ -218,7 +208,11 @@ export async function registerRoutes(app: Express): Promise<Express> {
       }
 
       console.log(`[Auth] Registration successful for: ${userData.email}, user ID: ${profile.id}`);
-      res.json({ user: { id: profile.id, email: profile.email, username: profile.username, role: profile.role } });
+      req.session.userId = profile.id;
+      req.session.userRole = profile.role;
+      req.session.save(() => {
+        res.json({ user: { id: profile.id, email: profile.email, username: profile.username, role: profile.role } });
+      });
     } catch (error: any) {
       logRouteError(req, error);
       console.error('Registration error:', error);
@@ -235,22 +229,10 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
       console.log(`[Auth] Login attempt for: ${email}`);
 
-      // Simple password hash function - consistent across registration and login
-      const hashPassword = (pwd: string): string => {
-        let hash = 0;
-        for (let i = 0; i < pwd.length; i++) {
-          const char = pwd.charCodeAt(i);
-          hash = ((hash << 5) - hash) + char;
-          hash = hash & hash;
-        }
-        return `hash_${Math.abs(hash).toString(16)}_${pwd.length}`;
-      };
-
       // Try Supabase auth first if available
       if (supabaseAdmin && supabaseAuth) {
         console.log(`[Auth] Trying Supabase auth for: ${email}`);
         try {
-          // Try signInWithPassword first
           const { data, error } = await supabaseAuth.auth.signInWithPassword({ email, password });
 
           if (!error && data.user) {
@@ -262,32 +244,15 @@ export async function registerRoutes(app: Express): Promise<Express> {
               role: (data.user.user_metadata?.role as "user" | "driver" | "admin" | undefined) || "user",
               avatarUrl: (data.user.user_metadata?.avatar_url as string | undefined) || null,
             });
-            return res.json({ user: { id: profile.id, email: profile.email, username: profile.username, role: profile.role, ecoPoints: profile.ecoPoints, totalRides: profile.totalRides, co2Saved: profile.co2Saved } });
+            req.session.userId = profile.id;
+            req.session.userRole = profile.role;
+            return req.session.save(() => {
+              res.json({ user: { id: profile.id, email: profile.email, username: profile.username, role: profile.role, ecoPoints: profile.ecoPoints, totalRides: profile.totalRides, co2Saved: profile.co2Saved } });
+            });
           }
 
           if (error) {
             console.log(`[Auth] Supabase signIn failed: ${error.message}`);
-
-            // Fallback: Check password_hash in user metadata
-            const { data: userData } = await supabaseAdmin.auth.admin.listUsers();
-            const authUser = userData?.users?.find(u => u.email === email);
-
-            if (authUser) {
-              const storedHash = authUser.user_metadata?.password_hash;
-              const inputHash = hashPassword(password);
-
-              if (storedHash && storedHash === inputHash) {
-                console.log(`[Auth] Password hash match for: ${email}`);
-                const profile = await ensureUserProfile({
-                  email,
-                  username: (authUser.user_metadata?.username as string) || email.split("@")[0],
-                  fullName: (authUser.user_metadata?.fullName as string | undefined) || null,
-                  role: (authUser.user_metadata?.role as "user" | "driver" | "admin" | undefined) || "user",
-                  avatarUrl: (authUser.user_metadata?.avatar_url as string | undefined) || null,
-                });
-                return res.json({ user: { id: profile.id, email: profile.email, username: profile.username, role: profile.role, ecoPoints: profile.ecoPoints, totalRides: profile.totalRides, co2Saved: profile.co2Saved } });
-              }
-            }
           }
         } catch (supabaseError: any) {
           console.error(`[Auth] Supabase auth exception:`, supabaseError);
@@ -301,7 +266,11 @@ export async function registerRoutes(app: Express): Promise<Express> {
         const user = await storage.verifyPassword(email, password);
         if (user) {
           console.log(`[Auth] Local storage auth success for: ${email}`);
-          return res.json({ user: { id: user.id, email: user.email, username: user.username, role: user.role, ecoPoints: user.ecoPoints, totalRides: user.totalRides, co2Saved: user.co2Saved } });
+          req.session.userId = user.id;
+          req.session.userRole = user.role;
+          return req.session.save(() => {
+            res.json({ user: { id: user.id, email: user.email, username: user.username, role: user.role, ecoPoints: user.ecoPoints, totalRides: user.totalRides, co2Saved: user.co2Saved } });
+          });
         }
       }
 
@@ -401,11 +370,26 @@ export async function registerRoutes(app: Express): Promise<Express> {
       delete (req.body as any).role;
       const payload = profileSchema.parse(req.body);
       const profile = await ensureUserProfile(payload);
-      res.json({ user: profile });
+      req.session.userId = profile.id;
+      req.session.userRole = profile.role;
+      req.session.save(() => {
+        res.json({ user: profile });
+      });
     } catch (error: any) {
       logRouteError(req, error);
       res.status(400).json({ message: error.message });
     }
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        logRouteError(req, err);
+        return res.status(500).json({ message: "Failed to logout" });
+      }
+      res.clearCookie("connect.sid");
+      res.json({ success: true });
+    });
   });
 
   // Spots routes
@@ -449,7 +433,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
   });
 
-  app.post("/api/bodega-items", async (req, res) => {
+  app.post("/api/bodega-items", requireAdmin, async (req, res) => {
     try {
       const { name, description, price, imageUrl, category, isEcoFriendly, stock, isAvailable } = req.body;
       if (!name || !price) {
@@ -472,29 +456,8 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
   });
 
-  // Rickshaws routes
-  app.get("/api/rickshaws", async (req, res) => {
-    try {
-      const rickshaws = await storage.getAllRickshaws();
-      res.json(rickshaws);
-    } catch (error: any) {
-      logRouteError(req, error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.get("/api/rickshaws/available", async (req, res) => {
-    try {
-      const rickshaws = await storage.getAvailableRickshaws();
-      res.json(rickshaws);
-    } catch (error: any) {
-      logRouteError(req, error);
-      res.status(500).json({ message: error.message });
-    }
-  });
-
   // Rides routes
-  app.post("/api/rides", async (req, res) => {
+  app.post("/api/rides", requireAuth, async (req, res) => {
     try {
       const rideData = insertRideSchema.parse(req.body);
       const ride = await storage.createRide(rideData);
@@ -505,7 +468,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
   });
 
-  app.get("/api/rides/user/:userId", async (req, res) => {
+  app.get("/api/rides/user/:userId", requireAuth, async (req, res) => {
     try {
       const { userId } = req.params;
       const rides = await storage.getRidesByUser(userId);
@@ -517,7 +480,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Get pending rides for drivers (MUST be before /api/rides/:id)
-  app.get("/api/rides/pending", async (req, res) => {
+  app.get("/api/rides/pending", requireAuth, async (req, res) => {
     try {
       const pendingRides = await storage.getPendingRides();
       res.json(pendingRides);
@@ -528,7 +491,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Get rides assigned to a driver (MUST be before /api/rides/:id)
-  app.get("/api/rides/driver/:driverId", async (req, res) => {
+  app.get("/api/rides/driver/:driverId", requireAuth, async (req, res) => {
     try {
       const { driverId } = req.params;
       const rides = await storage.getRidesByDriver(driverId);
@@ -539,7 +502,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
   });
 
-  app.get("/api/rides/:id", async (req, res) => {
+  app.get("/api/rides/:id", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const ride = await storage.getRideById(id);
@@ -553,7 +516,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
   });
 
-  app.patch("/api/rides/:id", asyncHandler(async (req, res, next) => {
+  app.patch("/api/rides/:id", requireAuth, asyncHandler(async (req, res, next) => {
     const { id } = req.params;
     const updates = updateRideSchema.parse(req.body);
 
@@ -568,7 +531,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   }));
 
   // Update airbear (for assigning drivers, updating location, etc.)
-  app.patch("/api/airbears/:id", asyncHandler(async (req, res, next) => {
+  app.patch("/api/airbears/:id", requireAuth, asyncHandler(async (req, res, next) => {
     const { id } = req.params;
     const updates = updateAirbearSchema.parse(req.body);
     const airbear = await storage.updateAirbear(id, updates);
@@ -593,7 +556,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Orders routes
-  app.post("/api/orders", async (req, res) => {
+  app.post("/api/orders", requireAuth, async (req, res) => {
     try {
       const orderData = insertOrderSchema.parse({
         ...req.body,
@@ -611,7 +574,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
   });
 
-  app.get("/api/orders/user/:userId", async (req, res) => {
+  app.get("/api/orders/user/:userId", requireAuth, async (req, res) => {
     try {
       const { userId } = req.params;
       const orders = await storage.getOrdersByUser(userId);
@@ -622,7 +585,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
   });
 
-  app.get("/api/orders/:id", async (req, res) => {
+  app.get("/api/orders/:id", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const order = await storage.getOrderById(id);
@@ -637,7 +600,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Stripe payment routes
-  app.post("/api/create-payment-intent", async (req, res) => {
+  app.post("/api/create-payment-intent", requireAuth, async (req, res) => {
     try {
       const { amount, orderId, rideId, userId, paymentMethod = "stripe" } = req.body;
 
@@ -664,14 +627,10 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
       // Check if Stripe is configured
       if (!stripe) {
-        // Return mock payment intent for demo mode
-        console.log('Stripe not configured - returning demo payment intent');
-        return res.json({
-          clientSecret: `mock_${Date.now()}_secret`,
-          paymentIntentId: `mock_pi_${Date.now()}`,
-          amount: Math.round(amount * 100),
-          currency: "usd",
-          status: "demo_mode"
+        console.log('Stripe not configured - payments unavailable');
+        return res.status(503).json({
+          error: "Payments not configured",
+          message: "Payment processing is not available. Please contact support."
         });
       }
 
@@ -704,7 +663,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Stripe checkout session route
-  app.post("/api/stripe/create-checkout-session", async (req, res) => {
+  app.post("/api/stripe/create-checkout-session", requireAuth, async (req, res) => {
     try {
       const { amount, currency = "usd", successUrl, cancelUrl } = req.body;
 
@@ -714,10 +673,10 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
       // Check if Stripe is configured
       if (!stripe) {
-        console.log('Stripe not configured - returning demo checkout session');
-        return res.json({
-          sessionId: `mock_cs_${Date.now()}`,
-          url: successUrl || `${req.protocol}://${req.get('host')}/dashboard?demo=true`,
+        console.log('Stripe not configured - checkout unavailable');
+        return res.status(503).json({
+          error: "Payments not configured",
+          message: "Payment processing is not available. Please contact support."
         });
       }
 
@@ -751,7 +710,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Payment confirmation
-  app.post("/api/payments/confirm", async (req, res) => {
+  app.post("/api/payments/confirm", requireAuth, async (req, res) => {
     try {
       const paymentData = insertPaymentSchema.parse(req.body);
       const payment = await storage.createPayment(paymentData);
@@ -762,7 +721,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
   });
 
-  app.post("/api/payments/confirm-cash", async (req, res) => {
+  app.post("/api/payments/confirm-cash", requireAuth, async (req, res) => {
     try {
       const { qrCode, driverId } = req.body;
       if (!qrCode) return res.status(400).json({ message: "Missing QR code data" });
@@ -796,16 +755,15 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // CEO T-shirt purchase route
-  app.post("/api/ceo-tshirt/purchase", async (req, res) => {
+  app.post("/api/ceo-tshirt/purchase", requireAuth, async (req, res) => {
     try {
       const { userId, size } = req.body;
 
       // Check if Stripe is configured
       if (!stripe) {
-        console.log('Stripe not configured - returning demo CEO T-shirt payment');
-        return res.json({
-          clientSecret: `mock_ceo_${Date.now()}_secret`,
-          paymentIntentId: `mock_pi_ceo_${Date.now()}`
+        return res.status(503).json({
+          error: "Payments not configured",
+          message: "Payment processing is not available. Please contact support."
         });
       }
 
@@ -836,7 +794,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Free ride validation for CEO T-shirt holders
-  app.get("/api/users/:userId/free-ride-status", async (req, res) => {
+  app.get("/api/users/:userId/free-ride-status", requireAuth, async (req, res) => {
     try {
       const { userId } = req.params;
       const user = await storage.getUser(userId);
@@ -944,7 +902,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Analytics routes (for admin dashboard)
-  app.get("/api/analytics/overview", async (req, res) => {
+  app.get("/api/analytics/overview", requireAdmin, async (req, res) => {
     try {
       const spots = await storage.getAllSpots();
       const airbears = await storage.getAllAirbears();
@@ -971,7 +929,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Push Notification Subscription Management
-  app.post("/api/push-subscriptions", async (req, res) => {
+  app.post("/api/push-subscriptions", requireAuth, async (req, res) => {
     try {
       const { subscription, preferences } = req.body;
 
@@ -997,7 +955,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Update push notification preferences
-  app.patch("/api/push-subscriptions", async (req, res) => {
+  app.patch("/api/push-subscriptions", requireAuth, async (req, res) => {
     try {
       const { endpoint, preferences } = req.body;
 
@@ -1021,7 +979,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Remove push subscription
-  app.delete("/api/push-subscriptions", async (req, res) => {
+  app.delete("/api/push-subscriptions", requireAuth, async (req, res) => {
     try {
       const { endpoint } = req.body;
 
@@ -1042,7 +1000,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Send test notification (for testing purposes)
-  app.post("/api/notifications/test", async (req, res) => {
+  app.post("/api/notifications/test", requireAuth, async (req, res) => {
     try {
       // In a real app, this would send a push notification to the user's subscription
       // For now, we'll just simulate it
@@ -1058,7 +1016,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Driver availability notification endpoint (called when drivers become available)
-  app.post("/api/notifications/driver-available", async (req, res) => {
+  app.post("/api/notifications/driver-available", requireAuth, async (req, res) => {
     try {
       const { userId, location, availableDrivers } = req.body;
 

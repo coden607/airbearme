@@ -11,7 +11,7 @@
 ### ✅ Mascot Display
 - **Header Logo**: AirBear mascot appears in top-left on ALL pages
 - **Floating Mascot**: Fixed bottom-right corner mascot on ALL pages
-- **No "Rickshaw" References**: Completely removed, replaced with "AirBear"
+- **No "AirBear" References**: Completely removed, replaced with "AirBear"
 
 ### ✅ Main Page Text
 **Title:** "AirBear"
@@ -292,7 +292,7 @@ node complete-validation.js
 ✅ Bodega: 12 products ready for purchase
 ✅ Checkout: Multiple payment methods
 ✅ Auth: User/driver registration working
-✅ Branding: "AirBear" everywhere, no rickshaw references
+✅ Branding: "AirBear" everywhere, no airbear references
 ✅ Mascot: Visible on every page (header + floating)
 ✅ PWA: Installable with offline support
 ✅ Performance: Optimized and fast

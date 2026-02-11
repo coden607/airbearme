@@ -1,6 +1,6 @@
 # Overview
 
-AirBear is a solar-powered rickshaw ride-sharing application built for Binghamton, NY. The app combines eco-friendly transportation with onboard mobile bodegas, allowing users to book solar-powered rickshaw rides while shopping for items during their journey. The application features a modern React frontend with Express/Node.js backend, real-time capabilities, payment processing through Stripe, and progressive web app (PWA) functionality.
+AirBear is a solar-powered airbear ride-sharing application built for Binghamton, NY. The app combines eco-friendly transportation with onboard mobile bodegas, allowing users to book solar-powered airbear rides while shopping for items during their journey. The application features a modern React frontend with Express/Node.js backend, real-time capabilities, payment processing through Stripe, and progressive web app (PWA) functionality.
 
 # User Preferences
 
@@ -27,7 +27,7 @@ Preferred communication style: Simple, everyday language.
 
 ## Data Storage
 - **Database**: PostgreSQL (configured via Drizzle but using in-memory for development)
-- **Schema**: Comprehensive schema with users, spots, rickshaws, rides, bodega items, orders, and payments
+- **Schema**: Comprehensive schema with users, spots, airbears, rides, bodega items, orders, and payments
 - **User Roles**: Role-based system (user, driver, admin) with different UI experiences
 - **Data Models**: Strongly typed with Zod validation schemas
 
@@ -40,7 +40,7 @@ Preferred communication style: Simple, everyday language.
 ## External Dependencies
 
 - **Payment Processing**: Stripe integration with support for card payments, Apple Pay, Google Pay, and cash (QR code)
-- **Maps & Location**: Leaflet for interactive maps with custom rickshaw markers
+- **Maps & Location**: Leaflet for interactive maps with custom airbear markers
 - **Real-time Features**: Planned Supabase integration for real-time ride updates and inventory management
 - **Cloud Storage**: Supabase storage for file uploads (avatars, item images)
 - **GitHub Integration**: Octokit client for repository management and deployment

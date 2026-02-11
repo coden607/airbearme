@@ -31,7 +31,7 @@ export default function AirbearAvatar({ size = "md", showBadge = true, className
         className="w-full h-full object-cover"
       />
 
-      {/* Mini rickshaw energy ring */}
+      {/* Mini airbear energy ring */}
       <div className="absolute -bottom-3 left-1/2 -translate-x-1/2">
         <AirbearWheel size={size === "lg" ? "md" : "sm"} animated glowing effectType="solar" />
       </div>

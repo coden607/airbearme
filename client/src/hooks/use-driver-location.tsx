@@ -167,31 +167,11 @@ export function useAirbearLocationUpdates() {
         // Poll as fallback (every 5 seconds for smoother updates)
         const pollInterval = setInterval(fetchAirbears, 5000);
 
-        // Simulate smooth movement for available airbears (enhances demo visualization)
-        const movementInterval = setInterval(() => {
-            setAirbears((prev) =>
-                prev.map((bear) => {
-                    if (bear.is_available || bear.isAvailable) {
-                        // Small random movement to simulate real-time driver tracking
-                        const latOffset = (Math.random() - 0.5) * 0.0003;
-                        const lngOffset = (Math.random() - 0.5) * 0.0003;
-                        return {
-                            ...bear,
-                            latitude: (Number(bear.latitude) || 42.0987) + latOffset,
-                            longitude: (Number(bear.longitude) || -75.9179) + lngOffset,
-                        };
-                    }
-                    return bear;
-                })
-            );
-        }, 2500);
-
         return () => {
             if (supabase && channel) {
                 supabase.removeChannel(channel);
             }
             clearInterval(pollInterval);
-            clearInterval(movementInterval);
         };
     }, [supabase]);
 

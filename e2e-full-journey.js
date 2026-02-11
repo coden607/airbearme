@@ -186,7 +186,7 @@ class E2ETestRunner {
     this.logStep('🐻 User checks available AirBears');
     
     try {
-      const airbears = await this.request(`${PROD_URL}/api/rickshaws`);
+      const airbears = await this.request(`${PROD_URL}/api/airbears`);
       
       if (!Array.isArray(airbears)) {
         throw new Error('Airbears API not returning array');

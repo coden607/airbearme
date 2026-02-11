@@ -20,8 +20,8 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (userData: { email: string; username: string; password: string; confirmPassword: string; role: "user" | "driver" | "admin" }) => Promise<void>;
-  logout: () => void;
+  register: (userData: { email: string; username: string; password: string; confirmPassword: string; role: "user" | "driver" }) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -113,25 +113,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data: listener } = client.auth.onAuthStateChange(async (event, session) => {
           if (session?.user) {
             await syncProfile(session.user);
-          } else {
-            // Only clear user on explicit logout, not on session check failures
-            if (event === 'SIGNED_OUT') {
-              setUser(null);
-              localStorage.removeItem("airbear-user");
-            } else {
-              // Preserve user from localStorage for other events (initial load, etc.)
-              const storedUser = localStorage.getItem("airbear-user");
-              if (storedUser) {
-                try {
-                  const parsed = JSON.parse(storedUser);
-                  setUser(parsed);
-                } catch (parseError) {
-                  console.warn('[Auth] Failed to parse stored user data on auth change:', parseError);
-                  localStorage.removeItem("airbear-user");
-                }
-              }
-            }
+          } else if (event === 'SIGNED_OUT') {
+            setUser(null);
+            localStorage.removeItem("airbear-user");
+          } else if (event === 'TOKEN_REFRESHED') {
+            // Token refresh failed without a session = session expired
+            setUser(null);
+            localStorage.removeItem("airbear-user");
           }
+          // For INITIAL_SESSION without a session, do nothing - already handled above
         });
 
         cleanup = () => listener.subscription.unsubscribe();
@@ -184,19 +174,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
         setUser(loginUser);
         localStorage.setItem("airbear-user", JSON.stringify(loginUser));
-
-        // Also try to sign in with Supabase for session management (optional)
-        const client = getSupabaseClient(false);
-        if (client) {
-          try {
-            const { error } = await client.auth.signInWithPassword({ email, password });
-            if (error) {
-              console.warn("Supabase session creation failed, but login succeeded:", error.message);
-            }
-          } catch (supabaseError) {
-            console.warn("Supabase session error, but login succeeded:", supabaseError);
-          }
-        }
         return;
       }
 
@@ -209,7 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (userData: { email: string; username: string; password: string; confirmPassword: string; role: "user" | "driver" | "admin" }) => {
+  const register = async (userData: { email: string; username: string; password: string; confirmPassword: string; role: "user" | "driver" }) => {
     setIsLoading(true);
     try {
       // Validate password match
@@ -227,6 +204,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: userData.email,
         username: userData.username,
         password: userData.password,
+        confirmPassword: userData.confirmPassword,
         role: userData.role,
         fullName: userData.username,
       });
@@ -277,10 +255,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
 
-  const logout = () => {
+  const logout = async () => {
     const client = getSupabaseClient(false);
     if (client) {
-      client.auth.signOut();
+      try {
+        await client.auth.signOut();
+      } catch (error) {
+        console.warn("[Auth] signOut error:", error);
+      }
+    }
+    try {
+      await apiRequest("POST", "/api/auth/logout");
+    } catch (error) {
+      console.warn("[Auth] Server logout error:", error);
     }
     setUser(null);
     localStorage.removeItem("airbear-user");

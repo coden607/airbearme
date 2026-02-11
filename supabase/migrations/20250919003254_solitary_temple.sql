@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS spots (
   created_at timestamptz DEFAULT now()
 );
 
--- Airbears table (renamed from rickshaws)
+-- Airbears table
 CREATE TABLE IF NOT EXISTS airbears (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   driver_id uuid REFERENCES users(id),

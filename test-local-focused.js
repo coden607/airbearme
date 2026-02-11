@@ -118,21 +118,21 @@ class LocalWorkflowTests {
     });
   }
 
-  static async testRickshawsData() {
-    return LocalTestUtils.measureTime('Rickshaws Data', async () => {
-      const response = await LocalTestUtils.request(`${BASE_URL}/api/rickshaws`);
-      
+  static async testAirbearsData() {
+    return LocalTestUtils.measureTime('Airbears Data', async () => {
+      const response = await LocalTestUtils.request(`${BASE_URL}/api/airbears`);
+
       if (!Array.isArray(response)) {
-        throw new Error('Invalid rickshaws response');
+        throw new Error('Invalid airbears response');
       }
-      
+
       if (response.length > 0) {
-        const rickshaw = response[0];
-        if (!rickshaw.id || !rickshaw.latitude || !rickshaw.longitude) {
-          throw new Error('Invalid rickshaw data structure');
+        const airbear = response[0];
+        if (!airbear.id || !airbear.latitude || !airbear.longitude) {
+          throw new Error('Invalid airbear data structure');
         }
       }
-      
+
       return { count: response.length, available: response.filter(r => r.isAvailable).length };
     });
   }

@@ -68,7 +68,7 @@ export function serveStatic(app: Express) {
     } else {
       // Fallback manifest for development
       const fallbackManifest = {
-        name: 'AirBear - Solar Rickshaw Ride Share',
+        name: 'AirBear - Solar Electric Ride Share',
         short_name: 'AirBear',
         description: 'Eco-friendly solar-powered rides in Binghamton, NY with onboard bodegas',
         theme_color: '#10b981',

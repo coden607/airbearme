@@ -138,7 +138,7 @@ class FinalE2ETests {
 
   static async testAirbears() {
     return FinalE2ETestUtils.measureTime('AirBears Data', async () => {
-      const airbears = await FinalE2ETestUtils.request(`${PROD_URL}/api/rickshaws`);
+      const airbears = await FinalE2ETestUtils.request(`${PROD_URL}/api/airbears`);
       
       if (!Array.isArray(airbears)) {
         throw new Error('Invalid airbears response');
@@ -182,7 +182,7 @@ class FinalE2ETests {
   static async testMapFunctionality() {
     return FinalE2ETestUtils.measureTime('Map Functionality', async () => {
       const spots = await FinalE2ETestUtils.request(`${PROD_URL}/api/spots`);
-      const airbears = await FinalE2ETestUtils.request(`${PROD_URL}/api/rickshaws`);
+      const airbears = await FinalE2ETestUtils.request(`${PROD_URL}/api/airbears`);
       
       // Test coordinate validity
       const validCoordinates = spots.every(spot => 
@@ -246,7 +246,7 @@ class FinalE2ETests {
       const requests = [
         FinalE2ETestUtils.request(`${PROD_URL}/api/health`),
         FinalE2ETestUtils.request(`${PROD_URL}/api/spots`),
-        FinalE2ETestUtils.request(`${PROD_URL}/api/rickshaws`),
+        FinalE2ETestUtils.request(`${PROD_URL}/api/airbears`),
         FinalE2ETestUtils.request(`${PROD_URL}/api/bodega/items`)
       ];
       

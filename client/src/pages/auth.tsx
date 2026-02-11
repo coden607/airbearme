@@ -32,7 +32,7 @@ export default function Auth() {
     password: "",
     confirmPassword: "",
     username: "",
-    role: "user" as "user" | "driver" | "admin",
+    role: "user" as "user" | "driver",
   });
 
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);

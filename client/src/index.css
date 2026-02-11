@@ -140,7 +140,7 @@
   }
 }
 
-@keyframes rickshaw-bounce {
+@keyframes airbear-bounce {
   0% { 
     transform: scale(1); 
   }
@@ -743,8 +743,8 @@
   animation: particle 4s ease-in-out infinite;
 }
 
-.animate-rickshaw-bounce {
-  animation: rickshaw-bounce 1s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+.animate-airbear-bounce {
+  animation: airbear-bounce 1s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
 .animate-wheel-spin {

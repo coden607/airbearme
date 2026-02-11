@@ -104,16 +104,16 @@ class ProductionTests {
   static async testDatabaseConnection() {
     return ProductionTestUtils.measureTime('Database Connection', async () => {
       const spots = await ProductionTestUtils.request(`${PROD_URL}/api/spots`);
-      const rickshaws = await ProductionTestUtils.request(`${PROD_URL}/api/rickshaws`);
+      const airbears = await ProductionTestUtils.request(`${PROD_URL}/api/airbears`);
       const bodega = await ProductionTestUtils.request(`${PROD_URL}/api/bodega/items`);
       
-      if (!Array.isArray(spots) || !Array.isArray(rickshaws) || !Array.isArray(bodega)) {
+      if (!Array.isArray(spots) || !Array.isArray(airbears) || !Array.isArray(bodega)) {
         throw new Error('Database queries failed');
       }
       
       return { 
         spots: spots.length, 
-        rickshaws: rickshaws.length, 
+        airbears: airbears.length, 
         bodega: bodega.length 
       };
     });
@@ -122,7 +122,7 @@ class ProductionTests {
   static async testDataIntegrity() {
     return ProductionTestUtils.measureTime('Data Integrity', async () => {
       const spots = await ProductionTestUtils.request(`${PROD_URL}/api/spots`);
-      const rickshaws = await ProductionTestUtils.request(`${PROD_URL}/api/rickshaws`);
+      const airbears = await ProductionTestUtils.request(`${PROD_URL}/api/airbears`);
       const bodega = await ProductionTestUtils.request(`${PROD_URL}/api/bodega/items`);
       
       // Validate spots structure
@@ -133,11 +133,11 @@ class ProductionTests {
         }
       }
       
-      // Validate rickshaws structure
-      if (rickshaws.length > 0) {
-        const rickshaw = rickshaws[0];
-        if (!rickshaw.id || !rickshaw.latitude || !rickshaw.longitude) {
-          throw new Error('Invalid rickshaw data structure');
+      // Validate airbears structure
+      if (airbears.length > 0) {
+        const airbear = airbears[0];
+        if (!airbear.id || !airbear.latitude || !airbear.longitude) {
+          throw new Error('Invalid airbear data structure');
         }
       }
       
@@ -151,7 +151,7 @@ class ProductionTests {
       
       return { 
         spotsValid: spots.length > 0, 
-        rickshawsValid: rickshaws.length > 0, 
+        airbearsValid: airbears.length > 0, 
         bodegaValid: bodega.length > 0 
       };
     });
@@ -303,7 +303,7 @@ class ProductionTests {
       const requests = [
         ProductionTestUtils.request(`${PROD_URL}/api/health`),
         ProductionTestUtils.request(`${PROD_URL}/api/spots`),
-        ProductionTestUtils.request(`${PROD_URL}/api/rickshaws`),
+        ProductionTestUtils.request(`${PROD_URL}/api/airbears`),
         ProductionTestUtils.request(`${PROD_URL}/api/bodega/items`)
       ];
       

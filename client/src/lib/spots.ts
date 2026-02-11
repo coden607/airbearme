@@ -88,7 +88,7 @@ export const estimateRideFare = (distance: number): number => {
 };
 
 export const estimateRideTime = (distance: number): number => {
-  const averageSpeedKmh = 15; // Average rickshaw speed including stops
+  const averageSpeedKmh = 15; // Average airbear speed including stops
   return Math.round((distance / averageSpeedKmh) * 60); // Return time in minutes
 };
 

@@ -222,7 +222,7 @@ class LiveProductionTester {
     this.logStep('🐻 Checking AirBear Availability');
     
     try {
-      const airbears = await this.request(`${PROD_URL}/api/rickshaws`);
+      const airbears = await this.request(`${PROD_URL}/api/airbears`);
       
       if (!Array.isArray(airbears)) throw new Error('Invalid airbears response');
       

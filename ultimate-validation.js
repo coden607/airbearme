@@ -148,8 +148,8 @@ async function testGetUserRides() {
 
 async function testDriverGetRides() {
   // Test getting available rides for driver
-  const response = await fetch(`${BASE_URL}/api/rickshaws/available`);
-  if (!response.ok) throw new Error('Failed to get available rickshaws');
+  const response = await fetch(`${BASE_URL}/api/airbears/available`);
+  if (!response.ok) throw new Error('Failed to get available airbears');
   return await response.json();
 }
 

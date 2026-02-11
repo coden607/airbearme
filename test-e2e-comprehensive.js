@@ -217,22 +217,22 @@ class APITests {
     });
   }
 
-  static async testRickshawsAPI() {
-    return TestUtils.measureTime('Rickshaws API', async () => {
-      const response = await TestUtils.request(`${BASE_URL}/api/rickshaws`);
-      
+  static async testAirbearsAPI() {
+    return TestUtils.measureTime('Airbears API', async () => {
+      const response = await TestUtils.request(`${BASE_URL}/api/airbears`);
+
       if (!Array.isArray(response)) {
-        throw new Error('Invalid rickshaws response');
+        throw new Error('Invalid airbears response');
       }
-      
-      // Validate rickshaw structure
+
+      // Validate airbear structure
       if (response.length > 0) {
-        const rickshaw = response[0];
-        if (!rickshaw.id || !rickshaw.latitude || !rickshaw.longitude) {
-          throw new Error('Invalid rickshaw structure');
+        const airbear = response[0];
+        if (!airbear.id || !airbear.latitude || !airbear.longitude) {
+          throw new Error('Invalid airbear structure');
         }
       }
-      
+
       return response;
     });
   }
@@ -343,7 +343,7 @@ class RealtimeTests {
 
       // This would normally be handled by the driver's GPS
       // For testing, we'll verify the API can handle location updates
-      const response = await TestUtils.request(`${BASE_URL}/api/rickshaws`);
+      const response = await TestUtils.request(`${BASE_URL}/api/airbears`);
       
       if (!Array.isArray(response)) {
         throw new Error('Cannot verify location updates');

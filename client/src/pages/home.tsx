@@ -135,7 +135,7 @@ export default function Home() {
             />
           </motion.div>
 
-          {/* Mini rickshaw avatars */}
+          {/* Mini airbear avatars */}
           <motion.div
             className="flex items-center justify-center gap-4 mb-6"
             initial={{ opacity: 0, y: 10 }}

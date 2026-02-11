@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Link, useLocation } from "wouter";
+import { useState } from "react";
+import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
@@ -83,15 +83,16 @@ export default function Dashboard() {
   const { data: analytics } = useQuery<Analytics>({
     queryKey: ["analytics", "overview"],
     queryFn: async () => {
+      // Use the server API which works with both Supabase and MemStorage
+      const response = await fetch('/api/analytics/overview');
+      if (response.ok) {
+        return response.json();
+      }
+      // Fallback to direct Supabase if API fails
       const supabase = getSupabaseClient(false);
-      if (!supabase) return {
-        totalSpots: 16,
-        totalAirbears: 1,
-        activeAirbears: 1,
-        chargingAirbears: 0,
-        maintenanceAirbears: 0,
-        averageBatteryLevel: 95
-      };
+      if (!supabase) {
+        return { totalSpots: 0, totalAirbears: 0, activeAirbears: 0, chargingAirbears: 0, maintenanceAirbears: 0, averageBatteryLevel: 0 };
+      }
 
       const [spotsRes, airbearsRes] = await Promise.all([
         supabase.from('spots').select('id', { count: 'exact', head: true }).eq('is_active', true),
@@ -113,22 +114,9 @@ export default function Dashboard() {
   });
 
   const liveFleet = useAirbearLocationUpdates();
-  const [, setLocation] = useLocation();
 
-  useEffect(() => {
-    if (user === null) {
-      // Only redirect if we know there's no user (not just loading)
-      setLocation('/auth');
-    }
-  }, [user, setLocation]);
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size="lg" text="Loading dashboard..." />
-      </div>
-    );
-  }
+  // ProtectedRoute ensures user is non-null, but guard for TypeScript
+  if (!user) return null;
 
   const renderUserDashboard = () => (
     <div className="space-y-8">

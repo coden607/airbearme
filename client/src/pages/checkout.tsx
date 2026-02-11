@@ -337,30 +337,15 @@ export default function Checkout() {
     }
   };
 
-  // Auto-create guest user for fast checkout if no user
+  // Redirect to auth if not logged in
   useEffect(() => {
-    if (!user && orderData.total > 0) {
-      // Check localStorage first
-      const storedUser = localStorage.getItem('airbear-user');
-      if (!storedUser) {
-        // Auto-create guest for seamless checkout
-        const guestUser = {
-          id: `guest_${Date.now()}`,
-          email: 'guest@airbear.app',
-          username: 'Guest Rider',
-          role: 'user' as const,
-          ecoPoints: 0,
-          totalRides: 0,
-          co2Saved: '0',
-        };
-        localStorage.setItem('airbear-user', JSON.stringify(guestUser));
-        window.location.reload();
-      }
+    if (!user) {
+      const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.href = `/auth?returnUrl=${returnUrl}`;
     }
-  }, [user, orderData.total]);
+  }, [user]);
 
   if (!user) {
-    // Show loading while auto-creating guest
     return (
       <div className="min-h-screen flex items-center justify-center py-8">
         <Card className="max-w-md mx-auto glass-morphism">
@@ -368,9 +353,9 @@ export default function Checkout() {
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
               <CreditCard className="h-8 w-8 text-primary" />
             </div>
-            <h2 className="text-xl font-semibold mb-2">Setting Up Checkout...</h2>
+            <h2 className="text-xl font-semibold mb-2">Sign in Required</h2>
             <p className="text-muted-foreground mb-4">
-              Preparing your payment session...
+              Please sign in to complete your payment.
             </p>
             <LoadingSpinner size="md" />
           </CardContent>
@@ -573,31 +558,6 @@ export default function Checkout() {
                       </div>
                     </div>
 
-                    {/* Demo Payment Button - Always Available for Testing */}
-                    <div className="mb-6 p-4 border-2 border-dashed border-emerald-500/50 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20">
-                      <div className="text-center">
-                        <p className="text-sm text-muted-foreground mb-3">
-                          🧪 <strong>Test Mode:</strong> Complete payment instantly for testing
-                        </p>
-                        <Button
-                          onClick={handlePaymentSuccess}
-                          className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
-                        >
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                          Complete Test Payment (${orderData.total.toFixed(2)})
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="relative mb-6">
-                      <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t border-muted" />
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-card px-2 text-muted-foreground">Or use real payment</span>
-                      </div>
-                    </div>
-
                     {/* Stripe Payment Form */}
                     {clientSecret && clientSecret.startsWith('mock_') ? (
                       <div className="space-y-4 text-center p-6 border rounded-lg bg-muted/10">
@@ -606,16 +566,10 @@ export default function Checkout() {
                             <Zap className="h-6 w-6 text-yellow-600" />
                           </div>
                         </div>
-                        <h3 className="font-semibold text-lg">Demo Payment Mode</h3>
+                        <h3 className="font-semibold text-lg">Payments Not Available</h3>
                         <p className="text-sm text-muted-foreground mb-4">
-                          This is a simulated payment environment. No actual card is charged.
+                          Payment processing is not configured. Please contact support or try again later.
                         </p>
-                        <Button
-                          onClick={handlePaymentSuccess}
-                          className="w-full eco-gradient text-white hover-lift animate-pulse-glow"
-                        >
-                          Complete Demo Payment
-                        </Button>
                       </div>
                     ) : clientSecret ? (
                       <Elements stripe={stripePromise} options={{ clientSecret }}>

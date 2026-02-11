@@ -128,8 +128,8 @@ curl -X POST https://pwa4-seven.vercel.app/api/auth/register \
 ### Step 2: Deploy Frontend Fixes (5 minutes)
 
 Fixed issues:
-- ✅ Changed title from "Solar Rickshaw" → "Solar Electric"
-- ✅ Removed all "rickshaw/tut-tut" references
+- ✅ Changed title to "Solar Electric"
+- ✅ Removed all "airbear/airbear" references
 - ✅ Updated CSP to allow Unsplash images
 - ✅ Fixed all branding to say "AirBears"
 
@@ -166,7 +166,7 @@ git push origin main
 
 ### Visual/Branding
 - [ ] Tab title shows "AirBear - Solar Electric Ride Share"
-- [ ] No "rickshaw" or "tut-tut" references anywhere
+- [ ] No "airbear" or "airbear" references anywhere
 - [ ] AirBear mascot displays on all pages
 - [ ] Product images load from Unsplash
 
@@ -264,7 +264,7 @@ After running the migration and deploying fixes:
 - Real-time map updates
 
 ✅ **Perfect Branding**
-- No rickshaw/tut-tut references
+- No airbear/airbear references
 - Consistent "AirBear" branding
 - Mascot logo on all pages
 - Professional Solar Electric messaging

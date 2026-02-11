@@ -43,7 +43,7 @@ npm run dev
 1. ✅ Fixed Stripe key error by adding fallback
 2. ✅ Set default theme to dark mode
 3. ✅ Fixed Vite configuration for proper file serving
-4. ✅ Added legacy rickshaw method compatibility
+4. ✅ Added legacy airbear method compatibility
 5. ✅ Removed debug code and test messages
 
 ## Environment Variables

@@ -44,7 +44,7 @@ async function testRealtimeTracking() {
 
     // Step 2: Get Initial AirBear Locations
     console.log('2️⃣ Getting Initial AirBear Locations...');
-    const airbearsResponse = await fetch(`${BASE_URL}/api/rickshaws`);
+    const airbearsResponse = await fetch(`${BASE_URL}/api/airbears`);
     const airbears = await airbearsResponse.json();
     console.log('✅ Current AirBears:', airbears.length, 'vehicles');
     airbears.forEach(bear => {

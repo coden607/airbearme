@@ -1,12 +1,9 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
-import { mockApi } from '@/lib/mock-api';
-
-const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === 'true';
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     let errorMessage = `${res.status}: ${res.statusText}`;
-    
+
     try {
       const text = await res.text();
       if (text) {
@@ -15,7 +12,7 @@ async function throwIfResNotOk(res: Response) {
     } catch (parseError) {
       console.warn('[QueryClient] Failed to parse error response:', parseError);
     }
-    
+
     throw new Error(errorMessage);
   }
 }
@@ -26,15 +23,6 @@ export async function apiRequest(
   data?: unknown | undefined,
 ): Promise<Response> {
   try {
-    if (USE_MOCK_API) {
-      if (method === 'GET') {
-        return mockApi.get(url);
-      }
-      if (method === 'POST') {
-        return mockApi.post(url, data);
-      }
-    }
-
     const res = await fetch(url, {
       method,
       headers: data ? { "Content-Type": "application/json" } : {},

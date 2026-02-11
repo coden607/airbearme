@@ -1,11 +1,11 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "@/hooks/use-auth";
+import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ThemeProvider } from "next-themes";
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
 
 // Pages
 import Home from "@/pages/home";
@@ -23,6 +23,7 @@ import Terms from "@/pages/terms";
 import Challenges from "@/pages/challenges";
 import Rewards from "@/pages/rewards";
 import DriverDashboard from "@/pages/driver-dashboard";
+import OAuthCallback from "@/pages/oauth-callback";
 import NotFound from "@/pages/not-found";
 
 // Components
@@ -33,6 +34,25 @@ import ErrorBoundary from "@/components/error-boundary";
 import AirbearWheel from "@/components/airbear-wheel";
 import PWAInstallPrompt from "@/components/pwa-install-prompt";
 import { AirBearMascot } from "@/components/airbear-mascot";
+
+function ProtectedRoute({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  if (user === null) {
+    return <Redirect to="/auth" />;
+  }
+  return <>{children}</>;
+}
+
+function RoleRoute({ children, role }: { children: ReactNode; role: string }) {
+  const { user } = useAuth();
+  if (user === null) {
+    return <Redirect to="/auth" />;
+  }
+  if (user.role !== role) {
+    return <Redirect to="/dashboard" />;
+  }
+  return <>{children}</>;
+}
 
 function Router() {
   return (
@@ -51,13 +71,14 @@ function Router() {
               <Route path="/" component={Home} />
               <Route path="/auth" component={Auth} />
               <Route path="/auth/reset-password" component={ResetPassword} />
-              <Route path="/dashboard" component={Dashboard} />
+              <Route path="/auth/callback" component={OAuthCallback} />
+              <Route path="/dashboard">{() => <ProtectedRoute><Dashboard /></ProtectedRoute>}</Route>
               <Route path="/map" component={Map} />
               <Route path="/bodega" component={Bodega} />
-              <Route path="/checkout" component={Checkout} />
-              <Route path="/challenges" component={Challenges} />
-              <Route path="/rewards" component={Rewards} />
-              <Route path="/driver-dashboard" component={DriverDashboard} />
+              <Route path="/checkout">{() => <ProtectedRoute><Checkout /></ProtectedRoute>}</Route>
+              <Route path="/challenges">{() => <ProtectedRoute><Challenges /></ProtectedRoute>}</Route>
+              <Route path="/rewards">{() => <ProtectedRoute><Rewards /></ProtectedRoute>}</Route>
+              <Route path="/driver-dashboard">{() => <RoleRoute role="driver"><DriverDashboard /></RoleRoute>}</Route>
               <Route path="/promo" component={Promo} />
               <Route path="/support" component={Support} />
               <Route path="/safety" component={Safety} />

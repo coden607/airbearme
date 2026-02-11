@@ -1,5 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
+import session from "express-session";
 import { registerRoutes } from "./routes.js";
 import { log, env, errorHandler } from "./utils.js";
 
@@ -22,6 +23,19 @@ app.use(express.json({
   }
 }));
 app.use(express.urlencoded({ extended: false }));
+
+// Session middleware for server-side auth
+app.use(session({
+  secret: env.SESSION_SECRET || "dev-session-secret-change-in-production",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: env.NODE_ENV === "production",
+    httpOnly: true,
+    sameSite: "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  },
+}));
 
 // Define lenient CSP for development
 const devCsp = {

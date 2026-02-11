@@ -161,21 +161,21 @@ class CoreTests {
     });
   }
 
-  static async testRickshawsAPI() {
-    return TestUtils.measureTime('Rickshaws API', async () => {
-      const response = await TestUtils.request(`${BASE_URL}/api/rickshaws`);
-      
+  static async testAirbearsAPI() {
+    return TestUtils.measureTime('Airbears API', async () => {
+      const response = await TestUtils.request(`${BASE_URL}/api/airbears`);
+
       if (!Array.isArray(response)) {
-        throw new Error('Invalid rickshaws response');
+        throw new Error('Invalid airbears response');
       }
-      
+
       if (response.length > 0) {
-        const rickshaw = response[0];
-        if (!rickshaw.id || !rickshaw.latitude || !rickshaw.longitude) {
-          throw new Error('Invalid rickshaw structure');
+        const airbear = response[0];
+        if (!airbear.id || !airbear.latitude || !airbear.longitude) {
+          throw new Error('Invalid airbear structure');
         }
       }
-      
+
       return response;
     });
   }
@@ -503,14 +503,14 @@ class ProductionTests {
   static async testProductionAPIs() {
     return TestUtils.measureTime('Production APIs', async () => {
       const spots = await TestUtils.request(`${PROD_URL}/api/spots`);
-      const rickshaws = await TestUtils.request(`${PROD_URL}/api/rickshaws`);
+      const airbears = await TestUtils.request(`${PROD_URL}/api/airbears`);
       const bodega = await TestUtils.request(`${PROD_URL}/api/bodega/items`);
-      
-      if (!Array.isArray(spots) || !Array.isArray(rickshaws) || !Array.isArray(bodega)) {
+
+      if (!Array.isArray(spots) || !Array.isArray(airbears) || !Array.isArray(bodega)) {
         throw new Error('Production APIs returning invalid data');
       }
-      
-      return { spots: spots.length, rickshaws: rickshaws.length, bodega: bodega.length };
+
+      return { spots: spots.length, airbears: airbears.length, bodega: bodega.length };
     });
   }
 }

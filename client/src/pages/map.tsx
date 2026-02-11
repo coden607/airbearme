@@ -501,9 +501,24 @@ export default function Map() {
     return { time: timeMinutes, distance: Math.round(dist * 10) / 10 };
   };
 
+  const calculateFare = (pickupLat: number, pickupLng: number, dropoffLat: number, dropoffLng: number): string => {
+    const distance = calculateDistance(pickupLat, pickupLng, dropoffLat, dropoffLng);
+    const baseFare = 2.50;
+    const perMileRate = 1.50;
+    const fare = Math.max(4.00, baseFare + distance * perMileRate);
+    return (Math.round(fare * 100) / 100).toFixed(2);
+  };
+
   const handleBookRide = async () => {
     if (!selectedSpot || !selectedDestination) {
       toast({ title: "Error", description: "Please select pickup and destination.", variant: "destructive" });
+      return;
+    }
+
+    // Require authentication
+    if (!user) {
+      toast({ title: "Sign in Required", description: "Please sign in to book a ride.", variant: "destructive" });
+      window.location.href = '/auth';
       return;
     }
 
@@ -513,7 +528,6 @@ export default function Map() {
     // Pick the closest available airbear, or any if none at spot
     let selectedAirbear = availableAirbears.find(a => a.currentSpotId === selectedSpot.id);
     if (!selectedAirbear && availableAirbears.length > 0) {
-      // Find closest airbear
       let minDist = Infinity;
       for (const ab of availableAirbears) {
         const dist = calculateDistance(
@@ -527,31 +541,21 @@ export default function Map() {
       }
     }
 
-    // Create guest user if not logged in
-    const userId = user?.id || `guest_${Date.now()}`;
-    if (!user) {
-      const guestUser = {
-        id: userId,
-        email: 'guest@airbear.app',
-        username: 'Guest',
-        role: 'user' as const,
-        ecoPoints: 0,
-        totalRides: 0,
-        co2Saved: '0',
-      };
-      localStorage.setItem('airbear-user', JSON.stringify(guestUser));
-    }
+    const fare = calculateFare(
+      Number(selectedSpot.latitude), Number(selectedSpot.longitude),
+      Number(selectedDestination.latitude), Number(selectedDestination.longitude)
+    );
 
     try {
       const response = await fetch('/api/rides', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId,
+          userId: user.id,
           pickupSpotId: selectedSpot.id,
           dropoffSpotId: selectedDestination.id,
           airbearId: selectedAirbear?.id || null,
-          fare: "4.00",
+          fare,
           status: 'pending'
         })
       });
@@ -571,8 +575,7 @@ export default function Map() {
       setSelectedDestination(null);
 
       if (rideData.id) {
-        // Use client-side navigation to preserve auth state
-        window.location.href = `/checkout?rideId=${rideData.id}&amount=4`;
+        window.location.href = `/checkout?rideId=${rideData.id}&amount=${fare}`;
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';

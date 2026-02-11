@@ -202,7 +202,7 @@ class FinalValidationTests {
 
   static async testAirbears() {
     return FinalTestUtils.measureTime('AirBears Data', async () => {
-      const airbears = await FinalTestUtils.request(`${PROD_URL}/api/rickshaws`);
+      const airbears = await FinalTestUtils.request(`${PROD_URL}/api/airbears`);
       
       if (!Array.isArray(airbears)) {
         throw new Error('Airbears API not returning array');
@@ -406,7 +406,7 @@ class FinalValidationTests {
 
   static async testAirbears() {
     return FinalTestUtils.measureTime('AirBears Data', async () => {
-      const airbears = await FinalTestUtils.request(`${PROD_URL}/api/rickshaws`);
+      const airbears = await FinalTestUtils.request(`${PROD_URL}/api/airbears`);
       
       if (!Array.isArray(airbears)) {
         throw new Error('Airbears API not returning array');

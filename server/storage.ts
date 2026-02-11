@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import bcrypt from "bcryptjs";
 import { env } from "./utils.js";
 import {
   User, InsertUser,
@@ -164,9 +165,6 @@ interface IStorage {
   createPayment(payment: InsertPayment): Promise<Payment>;
   updatePayment(id: string, updates: Partial<Payment>): Promise<Payment>;
 
-  // Legacy API support
-  getAllRickshaws(): Promise<any[]>;
-  getAvailableRickshaws(): Promise<any[]>;
 }
 
 class MemStorage implements IStorage {
@@ -179,28 +177,18 @@ class MemStorage implements IStorage {
   private orders = new Map<string, Order>();
   private payments = new Map<string, Payment>();
 
-  // Simple password hashing for demo (in production, use bcrypt)
-  private hashPassword(password: string): string {
-    let hash = 0;
-    for (let i = 0; i < password.length; i++) {
-      const char = password.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
-    }
-    return `hash_${Math.abs(hash).toString(16)}_${password.length}`;
-  }
-
   async verifyPassword(email: string, password: string): Promise<User | null> {
     const user = await this.getUserByEmail(email);
     if (!user) return null;
     const storedHash = this.userPasswords.get(user.id);
     if (!storedHash) return null;
-    const inputHash = this.hashPassword(password);
-    return storedHash === inputHash ? user : null;
+    const isMatch = await bcrypt.compare(password, storedHash);
+    return isMatch ? user : null;
   }
 
   async setPassword(userId: string, password: string): Promise<void> {
-    this.userPasswords.set(userId, this.hashPassword(password));
+    const hash = await bcrypt.hash(password, 10);
+    this.userPasswords.set(userId, hash);
   }
 
   constructor() {
@@ -608,14 +596,6 @@ class MemStorage implements IStorage {
     return updatedAirbear;
   }
 
-  // Legacy API support
-  async getAllRickshaws(): Promise<any[]> {
-    return this.getAllAirbears();
-  }
-  async getAvailableRickshaws(): Promise<any[]> {
-    return this.getAvailableAirbears();
-  }
-
   // Rides
   async getRidesByUser(userId: string): Promise<Ride[]> {
     return Array.from(this.rides.values()).filter(r => r.userId === userId);
@@ -769,21 +749,9 @@ class SupabaseStorage implements IStorage {
     return data;
   }
 
-  // Simple hash function for password storage (same as MemStorage)
-  private hashPassword(password: string): string {
-    let hash = 0;
-    for (let i = 0; i < password.length; i++) {
-      const char = password.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
-    }
-    return `hash_${Math.abs(hash).toString(16)}_${password.length}`;
-  }
-
   // Password verification - try password_hash column first, fallback gracefully
   async verifyPassword(email: string, password: string): Promise<User | null> {
     try {
-      // First try to get user with password_hash if column exists
       const { data, error } = await this.supabase
         .from("users")
         .select("*")
@@ -792,7 +760,6 @@ class SupabaseStorage implements IStorage {
 
       if (error || !data) return null;
 
-      // Try to get password_hash separately (may not exist)
       try {
         const { data: hashData } = await this.supabase
           .from("users")
@@ -801,8 +768,8 @@ class SupabaseStorage implements IStorage {
           .maybeSingle();
 
         if (hashData?.password_hash) {
-          const inputHash = this.hashPassword(password);
-          if (hashData.password_hash === inputHash) {
+          const isMatch = await bcrypt.compare(password, hashData.password_hash);
+          if (isMatch) {
             return normalizeUserRow(data);
           }
         }
@@ -810,7 +777,6 @@ class SupabaseStorage implements IStorage {
         // password_hash column doesn't exist, that's ok
       }
 
-      // If no local password hash, return null to let routes.ts try Supabase Auth
       return null;
     } catch (e) {
       console.error("[SupabaseStorage] verifyPassword error:", e);
@@ -820,15 +786,13 @@ class SupabaseStorage implements IStorage {
 
   async setPassword(userId: string, password: string): Promise<void> {
     try {
-      const passwordHash = this.hashPassword(password);
-      // Try to update password_hash - will fail silently if column doesn't exist
+      const passwordHash = await bcrypt.hash(password, 10);
       const { error } = await this.supabase
         .from("users")
         .update({ password_hash: passwordHash })
         .eq("id", userId);
 
       if (error) {
-        // Column might not exist - that's ok, Supabase Auth will handle it
         console.log("[SupabaseStorage] setPassword: column may not exist, using Supabase Auth");
       }
     } catch (e) {
@@ -930,14 +894,6 @@ class SupabaseStorage implements IStorage {
   async updateAirbear(id: string, updates: Partial<Airbear>): Promise<Airbear> {
     const { data, error } = await this.supabase.from("airbears").update(updates).eq("id", id).select().single();
     return this.assert(data as Airbear, error);
-  }
-
-  // Legacy helpers
-  async getAllRickshaws(): Promise<any[]> {
-    return this.getAllAirbears();
-  }
-  async getAvailableRickshaws(): Promise<any[]> {
-    return this.getAvailableAirbears();
   }
 
   // Rides

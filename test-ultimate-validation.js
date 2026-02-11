@@ -189,7 +189,7 @@ class UltimateTests {
 
   static async testAirbears() {
     return UltimateTestUtils.measureTime('AirBears Data', async () => {
-      const airbears = await UltimateTestUtils.request(`${PROD_URL}/api/rickshaws`);
+      const airbears = await UltimateTestUtils.request(`${PROD_URL}/api/airbears`);
       
       if (!Array.isArray(airbears)) {
         throw new Error('Airbears API not returning array');

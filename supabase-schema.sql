@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS public.spots (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Airbears (Rickshaws) Table
+-- Airbears Table
 CREATE TABLE IF NOT EXISTS public.airbears (
   id TEXT PRIMARY KEY,
   current_spot_id TEXT REFERENCES public.spots(id),

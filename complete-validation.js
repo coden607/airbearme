@@ -196,7 +196,7 @@ async function testFrontend() {
         const checks = {
           hasTitle: html.includes('<title>'),
           hasManifest: html.includes('manifest.json'),
-          hasNoRickshaw: !html.toLowerCase().includes('rickshaw'),
+          hasNoBadBranding: !html.toLowerCase().includes('rickshaw'),
           hasAirbear: html.toLowerCase().includes('airbear'),
         };
 
@@ -206,8 +206,8 @@ async function testFrontend() {
           log('✅', `${page.name}: Loaded successfully (HTTP ${response.status})`, colors.green);
         } else {
           log('⚠️', `${page.name}: Loaded with issues`, colors.yellow);
-          if (checks.hasNoRickshaw === false) {
-            log('  ⚠️', '  Contains "rickshaw" reference', colors.yellow);
+          if (checks.hasNoBadBranding === false) {
+            log('  ⚠️', '  Contains outdated branding reference', colors.yellow);
           }
         }
       } else {

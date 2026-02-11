@@ -7,7 +7,7 @@ export default {
   safelist: [
     "airbear-holographic", "airbear-plasma", "airbear-solar-rays", "airbear-marker", "airbear-eco-breeze", "airbear-god-rays",
     "glass-morphism", "neumorphism", "eco-gradient", "particle-system", "airbear-wheel", "hover-lift", "ripple-effect",
-    "animate-spin-slow", "animate-pulse-glow", "animate-float", "animate-shimmer", "animate-particle", "animate-rickshaw-bounce",
+    "animate-spin-slow", "animate-pulse-glow", "animate-float", "animate-shimmer", "animate-particle", "animate-airbear-bounce",
     "animate-wheel-spin", "animate-neon-glow", "animate-vortex-zoom", "animate-confetti-burst", "animate-liquid-fill", "animate-ripple-wave",
     "animate-holographic", "animate-plasma", "animate-solar-rays", "animate-eco-breeze", "animate-airbear-bounce", "animate-god-rays",
     { pattern: /bg-(emerald|lime|amber)-(50|100|200|300|400|500|600|700|800|900)/ },
@@ -167,7 +167,7 @@ export default {
             opacity: "0.7" 
           },
         },
-        "rickshaw-bounce": {
+        "airbear-bounce": {
           "0%": { 
             transform: "scale(1)" 
           },
@@ -457,7 +457,7 @@ export default {
         "float": "float 6s ease-in-out infinite",
         "shimmer": "shimmer 2s linear infinite",
         "particle": "particle 4s ease-in-out infinite",
-        "rickshaw-bounce": "rickshaw-bounce 1s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
+        "airbear-bounce": "airbear-bounce 1s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
         "wheel-spin": "wheel-spin 1s linear infinite",
         "neon-glow": "neon-glow 1.5s ease-in-out infinite alternate",
         "vortex-zoom": "vortex-zoom 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
