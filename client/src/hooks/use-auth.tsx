@@ -19,6 +19,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
+  isInitialized: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (userData: { email: string; username: string; password: string; confirmPassword: string; role: "user" | "driver" }) => Promise<void>;
   logout: () => Promise<void>;
@@ -29,6 +30,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const { toast } = useToast();
   const supabase = getSupabaseClient(false);
 
@@ -148,7 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    fetchSession();
+    fetchSession().finally(() => setIsInitialized(true));
 
     return () => cleanup?.();
   }, [syncProfile, toast]);
@@ -293,6 +295,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = {
     user,
     isLoading,
+    isInitialized,
     login,
     register,
     logout,

@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, authFetch } from "@/lib/queryClient";
 import AirbearWheel from "@/components/airbear-wheel";
 import LoadingSpinner from "@/components/loading-spinner";
 import {
@@ -146,7 +146,7 @@ export default function Checkout() {
       });
     } else if (orderId) {
       // Coming from bodega checkout - fetch order details
-      fetch(`/api/orders/${orderId}`)
+      authFetch(`/api/orders/${orderId}`)
         .then(res => res.json())
         .then(order => {
           if (order && order.items) {
@@ -195,7 +195,6 @@ export default function Checkout() {
 
   const createPaymentIntentMutation = useMutation({
     mutationFn: async (data: any) => {
-      const { authFetch } = await import('@/lib/queryClient');
       const response = await authFetch('/api/create-payment-intent', {
         method: 'POST',
         headers: {
@@ -337,33 +336,6 @@ export default function Checkout() {
       setWalletLoading((prev) => ({ ...prev, google: false }));
     }
   };
-
-  // Redirect to auth if not logged in
-  useEffect(() => {
-    if (!user) {
-      const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
-      window.location.href = `/auth?returnUrl=${returnUrl}`;
-    }
-  }, [user]);
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center py-8">
-        <Card className="max-w-md mx-auto glass-morphism">
-          <CardContent className="p-6 text-center">
-            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-              <CreditCard className="h-8 w-8 text-primary" />
-            </div>
-            <h2 className="text-xl font-semibold mb-2">Sign in Required</h2>
-            <p className="text-muted-foreground mb-4">
-              Please sign in to complete your payment.
-            </p>
-            <LoadingSpinner size="md" />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   if (paymentSuccess) {
     return (

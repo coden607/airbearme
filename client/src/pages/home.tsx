@@ -49,29 +49,6 @@ export default function Home() {
     }
   });
 
-  // Fetch real-time analytics - refreshes every 30 seconds
-  const { data: analytics } = useQuery<Analytics>({
-    queryKey: ["analytics", "overview"],
-    queryFn: async () => {
-      try {
-        const response = await fetch('/api/analytics/overview');
-        if (!response.ok) throw new Error('Failed to fetch');
-        return await response.json();
-      } catch (error) {
-        console.error('Error fetching analytics:', error);
-        return {
-          totalSpots: 16,
-          totalAirbears: 0,
-          activeAirbears: 0,
-          chargingAirbears: 0,
-          maintenanceAirbears: 0,
-          averageBatteryLevel: 0
-        };
-      }
-    },
-    refetchInterval: 30000, // Refresh every 30 seconds
-  });
-
   // Fetch real-time available drivers - refreshes every 15 seconds
   const { data: airbears } = useQuery<Airbear[]>({
     queryKey: ["airbears", "available"],
@@ -87,6 +64,18 @@ export default function Home() {
     },
     refetchInterval: 15000, // Refresh every 15 seconds for real-time updates
   });
+
+  // Derive analytics from public endpoints (spots + airbears) to avoid hitting admin-only endpoint
+  const analytics: Analytics | undefined = spots && airbears ? {
+    totalSpots: spots.length || 16,
+    totalAirbears: airbears.length || 0,
+    activeAirbears: airbears.filter((a: Airbear) => (a.isAvailable ?? a.is_available ?? false)).length,
+    chargingAirbears: airbears.filter((a: Airbear) => (a.isCharging ?? a.is_charging ?? false)).length,
+    maintenanceAirbears: 0,
+    averageBatteryLevel: airbears.length > 0
+      ? Math.round(airbears.reduce((sum: number, a: Airbear) => sum + (a.batteryLevel ?? a.battery_level ?? 0), 0) / airbears.length)
+      : 0,
+  } : undefined;
 
   // Calculate available drivers (not charging, battery > 20%, marked available)
   // Handle both camelCase and snake_case field names from database

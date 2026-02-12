@@ -11,6 +11,15 @@ import {
   Lock
 } from "lucide-react";
 
+const colorClasses: Record<string, { bg: string; text: string }> = {
+  primary: { bg: "bg-primary/10", text: "text-primary" },
+  green: { bg: "bg-green-500/10", text: "text-green-500" },
+  red: { bg: "bg-red-500/10", text: "text-red-500" },
+  purple: { bg: "bg-purple-500/10", text: "text-purple-500" },
+  amber: { bg: "bg-amber-500/10", text: "text-amber-500" },
+  pink: { bg: "bg-pink-500/10", text: "text-pink-500" },
+};
+
 export default function Safety() {
   const safetyFeatures = [
     {
@@ -101,8 +110,8 @@ export default function Safety() {
             >
               <Card className="glass-morphism hover-lift h-full">
                 <CardHeader>
-                  <div className={`w-12 h-12 bg-${feature.color}-500/10 rounded-full flex items-center justify-center mb-4`}>
-                    <feature.icon className={`h-6 w-6 text-${feature.color}-500`} />
+                  <div className={`w-12 h-12 ${colorClasses[feature.color]?.bg || "bg-primary/10"} rounded-full flex items-center justify-center mb-4`}>
+                    <feature.icon className={`h-6 w-6 ${colorClasses[feature.color]?.text || "text-primary"}`} />
                   </div>
                   <CardTitle className="text-lg">{feature.title}</CardTitle>
                 </CardHeader>

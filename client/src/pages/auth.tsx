@@ -523,7 +523,6 @@ export default function Auth() {
                     >
                       <option value="user">User</option>
                       <option value="driver">Driver</option>
-                      <option value="admin">Admin</option>
                     </select>
                   </div>
                   <Button

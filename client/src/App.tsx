@@ -36,7 +36,14 @@ import PWAInstallPrompt from "@/components/pwa-install-prompt";
 import { AirBearMascot } from "@/components/airbear-mascot";
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, isInitialized } = useAuth();
+  if (!isInitialized) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <AirbearWheel size="lg" animated className="text-primary opacity-50" />
+      </div>
+    );
+  }
   if (user === null) {
     return <Redirect to="/auth" />;
   }
@@ -44,7 +51,14 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
 }
 
 function RoleRoute({ children, role }: { children: ReactNode; role: string }) {
-  const { user } = useAuth();
+  const { user, isInitialized } = useAuth();
+  if (!isInitialized) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <AirbearWheel size="lg" animated className="text-primary opacity-50" />
+      </div>
+    );
+  }
   if (user === null) {
     return <Redirect to="/auth" />;
   }

@@ -85,6 +85,7 @@ export default function DriverDashboard() {
                     status: 'accepted',
                     driverId: user?.id,
                     airbearId: assignedAirbear?.id,
+                    acceptedAt: new Date().toISOString(),
                 }),
             });
             if (!res.ok) throw new Error('Failed to accept ride');
@@ -138,7 +139,7 @@ export default function DriverDashboard() {
         try {
             const res = await fetch('/api/airbears');
             const airbears = await res.json();
-            const available = airbears.find((a: any) => !a.driverId && a.isAvailable);
+            const available = airbears.find((a: any) => !a.driverId && (a.isAvailable ?? a.is_available ?? a.isavailable));
             if (!available) {
                 toast({ title: "No Available Vehicles", description: "All AirBears are currently assigned.", variant: 'destructive' });
                 return;
