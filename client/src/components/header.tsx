@@ -137,16 +137,13 @@ export default function Header() {
                       Rewards
                     </DropdownMenuItem>
                   </Link>
-                  <DropdownMenuItem 
-                    className="cursor-pointer" 
+                  <DropdownMenuItem
+                    className="cursor-default opacity-50"
                     data-testid="menu-settings"
-                    onClick={() => {
-                      // Settings functionality placeholder
-                      alert('Settings page coming soon!');
-                    }}
+                    disabled
                   >
                     <Settings className="mr-2 h-4 w-4" />
-                    Settings
+                    Settings (Coming Soon)
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 

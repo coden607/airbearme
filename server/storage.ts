@@ -116,6 +116,54 @@ const toSnakeRidePayload = (ride: Partial<Ride>) =>
     distance: ride.distance,
   });
 
+const toSnakeAirbearPayload = (updates: Partial<Airbear>) => stripUndefined({
+  id: updates.id,
+  driver_id: (updates as any).driverId,
+  current_spot_id: (updates as any).currentSpotId,
+  latitude: updates.latitude,
+  longitude: updates.longitude,
+  battery_level: (updates as any).batteryLevel,
+  is_available: (updates as any).isAvailable,
+  is_charging: (updates as any).isCharging,
+  total_distance: (updates as any).totalDistance,
+  maintenance_status: (updates as any).maintenanceStatus,
+});
+
+const toSnakeOrderPayload = (order: Partial<InsertOrder | Order>) => stripUndefined({
+  id: (order as any).id,
+  user_id: (order as any).userId,
+  ride_id: (order as any).rideId,
+  airbear_id: (order as any).airbearId,
+  items: (order as any).items,
+  total_amount: (order as any).totalAmount,
+  status: (order as any).status,
+});
+
+const toSnakePaymentPayload = (payment: Partial<InsertPayment | Payment>) => stripUndefined({
+  id: (payment as any).id,
+  user_id: (payment as any).userId,
+  order_id: (payment as any).orderId,
+  ride_id: (payment as any).rideId,
+  stripe_payment_intent_id: (payment as any).stripePaymentIntentId,
+  amount: (payment as any).amount,
+  currency: (payment as any).currency,
+  payment_method: (payment as any).paymentMethod,
+  status: (payment as any).status,
+  metadata: (payment as any).metadata,
+});
+
+const toSnakeBodegaPayload = (updates: Partial<BodegaItem>) => stripUndefined({
+  id: (updates as any).id,
+  name: (updates as any).name,
+  description: (updates as any).description,
+  price: (updates as any).price,
+  image_url: (updates as any).imageUrl,
+  category: (updates as any).category,
+  is_eco_friendly: (updates as any).isEcoFriendly,
+  is_available: (updates as any).isAvailable,
+  stock: (updates as any).stock,
+});
+
 interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
@@ -847,10 +895,11 @@ class SupabaseStorage implements IStorage {
     const { data, error } = await this.supabase
       .from("rides")
       .select("*")
-      .eq("user_id", userId)
-      .gte("requested_at", start)
-      .lte("requested_at", end);
-    return this.assert((data ?? []) as Ride[], error);
+      .eq("userid", userId)
+      .gte("requestedat", start)
+      .lte("requestedat", end);
+    const rides = this.assert((data ?? []) as any[], error);
+    return rides.map(normalizeRideRow);
   }
 
   // Spots
@@ -892,7 +941,16 @@ class SupabaseStorage implements IStorage {
   }
 
   async updateAirbear(id: string, updates: Partial<Airbear>): Promise<Airbear> {
-    const { data, error } = await this.supabase.from("airbears").update(updates).eq("id", id).select().single();
+    const primaryPayload = stripUndefined(updates);
+    const fallbackPayload = toSnakeAirbearPayload(updates);
+    let data;
+    let error;
+
+    ({ data, error } = await this.supabase.from("airbears").update(primaryPayload).eq("id", id).select().single());
+    if (error && isMissingColumnError(error)) {
+      ({ data, error } = await this.supabase.from("airbears").update(fallbackPayload).eq("id", id).select().single());
+    }
+
     return this.assert(data as Airbear, error);
   }
 
@@ -963,7 +1021,16 @@ class SupabaseStorage implements IStorage {
   }
 
   async updateBodegaItem(id: string, updates: Partial<BodegaItem>): Promise<BodegaItem> {
-    const { data, error } = await this.supabase.from("bodega_items").update(updates).eq("id", id).select().single();
+    const primaryPayload = stripUndefined(updates);
+    const fallbackPayload = toSnakeBodegaPayload(updates);
+    let data;
+    let error;
+
+    ({ data, error } = await this.supabase.from("bodega_items").update(primaryPayload).eq("id", id).select().single());
+    if (error && isMissingColumnError(error)) {
+      ({ data, error } = await this.supabase.from("bodega_items").update(fallbackPayload).eq("id", id).select().single());
+    }
+
     return this.assert(data as BodegaItem, error);
   }
 
@@ -980,12 +1047,30 @@ class SupabaseStorage implements IStorage {
   }
 
   async createOrder(order: InsertOrder): Promise<Order> {
-    const { data, error } = await this.supabase.from("orders").insert(order).select().single();
+    const primaryPayload = stripUndefined(order as Record<string, unknown>);
+    const fallbackPayload = toSnakeOrderPayload(order);
+    let data;
+    let error;
+
+    ({ data, error } = await this.supabase.from("orders").insert(primaryPayload).select().single());
+    if (error && isMissingColumnError(error)) {
+      ({ data, error } = await this.supabase.from("orders").insert(fallbackPayload).select().single());
+    }
+
     return this.assert(data as Order, error);
   }
 
   async updateOrder(id: string, updates: Partial<Order>): Promise<Order> {
-    const { data, error } = await this.supabase.from("orders").update(updates).eq("id", id).select().single();
+    const primaryPayload = stripUndefined(updates as Record<string, unknown>);
+    const fallbackPayload = toSnakeOrderPayload(updates);
+    let data;
+    let error;
+
+    ({ data, error } = await this.supabase.from("orders").update(primaryPayload).eq("id", id).select().single());
+    if (error && isMissingColumnError(error)) {
+      ({ data, error } = await this.supabase.from("orders").update(fallbackPayload).eq("id", id).select().single());
+    }
+
     return this.assert(data as Order, error);
   }
 
@@ -996,12 +1081,30 @@ class SupabaseStorage implements IStorage {
   }
 
   async createPayment(payment: InsertPayment): Promise<Payment> {
-    const { data, error } = await this.supabase.from("payments").insert(payment).select().single();
+    const primaryPayload = stripUndefined(payment as Record<string, unknown>);
+    const fallbackPayload = toSnakePaymentPayload(payment);
+    let data;
+    let error;
+
+    ({ data, error } = await this.supabase.from("payments").insert(primaryPayload).select().single());
+    if (error && isMissingColumnError(error)) {
+      ({ data, error } = await this.supabase.from("payments").insert(fallbackPayload).select().single());
+    }
+
     return this.assert(data as Payment, error);
   }
 
   async updatePayment(id: string, updates: Partial<Payment>): Promise<Payment> {
-    const { data, error } = await this.supabase.from("payments").update(updates).eq("id", id).select().single();
+    const primaryPayload = stripUndefined(updates as Record<string, unknown>);
+    const fallbackPayload = toSnakePaymentPayload(updates);
+    let data;
+    let error;
+
+    ({ data, error } = await this.supabase.from("payments").update(primaryPayload).eq("id", id).select().single());
+    if (error && isMissingColumnError(error)) {
+      ({ data, error } = await this.supabase.from("payments").update(fallbackPayload).eq("id", id).select().single());
+    }
+
     return this.assert(data as Payment, error);
   }
 }

@@ -6,6 +6,7 @@ import { createClient } from "@supabase/supabase-js";
 import { getActiveSpotsData } from "../shared/spots-data.js";
 import { env, ApiError, asyncHandler, requireAuth, requireAdmin } from "./utils.js";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 
 const logRouteError = (req: Request, error: unknown) => {
@@ -15,6 +16,16 @@ const logRouteError = (req: Request, error: unknown) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Express> {
+  // Auth helper functions for ownership checks
+  const getAuthUserId = (req: Request): string | undefined => req.session?.userId || (req as any).userId;
+  const getAuthUserRole = (req: Request): string | undefined => req.session?.userRole || (req as any).userRole;
+
+  // Password reset tokens: token -> { email, expiresAt }
+  const resetTokens = new Map<string, { email: string; expiresAt: number }>();
+
+  // HMAC secret for signing cash QR codes
+  const qrSecret = env.QR_HMAC_SECRET || crypto.randomUUID();
+
   const supabaseUrl = env.SUPABASE_URL;
   const supabaseServiceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
   const supabaseAnonKey = env.SUPABASE_ANON_KEY;
@@ -160,8 +171,6 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
       let authUserId: string | undefined;
 
-      const passwordHash = await bcrypt.hash(userData.password, 10);
-
       // If Supabase is available, create auth user first
       if (supabaseAdmin) {
         console.log(`[Auth] Creating Supabase auth user for: ${userData.email}`);
@@ -210,7 +219,8 @@ export async function registerRoutes(app: Express): Promise<Express> {
       console.log(`[Auth] Registration successful for: ${userData.email}, user ID: ${profile.id}`);
       req.session.userId = profile.id;
       req.session.userRole = profile.role;
-      req.session.save(() => {
+      req.session.save((err) => {
+        if (err) { console.error('[Session] Save error:', err); }
         res.json({ user: { id: profile.id, email: profile.email, username: profile.username, role: profile.role } });
       });
     } catch (error: any) {
@@ -247,7 +257,8 @@ export async function registerRoutes(app: Express): Promise<Express> {
             });
             req.session.userId = profile.id;
             req.session.userRole = profile.role;
-            return req.session.save(() => {
+            return req.session.save((err) => {
+              if (err) { console.error('[Session] Save error:', err); }
               res.json({ user: { id: profile.id, email: profile.email, username: profile.username, role: profile.role, ecoPoints: profile.ecoPoints, totalRides: profile.totalRides, co2Saved: profile.co2Saved } });
             });
           }
@@ -269,7 +280,8 @@ export async function registerRoutes(app: Express): Promise<Express> {
           console.log(`[Auth] Local storage auth success for: ${email}`);
           req.session.userId = user.id;
           req.session.userRole = user.role;
-          return req.session.save(() => {
+          return req.session.save((err) => {
+            if (err) { console.error('[Session] Save error:', err); }
             res.json({ user: { id: user.id, email: user.email, username: user.username, role: user.role, ecoPoints: user.ecoPoints, totalRides: user.totalRides, co2Saved: user.co2Saved } });
           });
         }
@@ -315,14 +327,12 @@ export async function registerRoutes(app: Express): Promise<Express> {
           console.log(`[Auth] Password reset email sent via Supabase to: ${email}`);
         }
       } else {
-        // For local auth without email service, we'll generate a reset token
-        // In production, you'd send this via email
-        const resetToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        // For local auth without email service, generate a secure reset token
+        const resetToken = crypto.randomUUID();
+        const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
+        resetTokens.set(resetToken, { email, expiresAt });
         console.log(`[Auth] Generated reset token for ${email}: ${resetToken}`);
         console.log(`[Auth] Note: In production, this token would be sent via email`);
-
-        // Store the reset token (you'd add this to storage in production)
-        // For now, log it so the user can manually reset
       }
 
       res.json({ success: true, message: "If an account with that email exists, a reset link has been sent." });
@@ -334,15 +344,34 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
   });
 
-  // Reset password with token (for direct reset without email)
+  // Reset password with token
   app.post("/api/auth/reset-password", async (req, res) => {
     try {
-      const { email, newPassword } = z.object({
+      const { token, email, newPassword } = z.object({
+        token: z.string().min(1, "Reset token is required"),
         email: z.string().email(),
         newPassword: z.string().min(6),
       }).parse(req.body);
 
       console.log(`[Auth] Password reset attempt for: ${email}`);
+
+      // Validate reset token
+      const tokenData = resetTokens.get(token);
+      if (!tokenData) {
+        return res.status(400).json({ message: "Invalid or expired reset token" });
+      }
+
+      if (tokenData.email !== email) {
+        return res.status(400).json({ message: "Invalid or expired reset token" });
+      }
+
+      if (Date.now() > tokenData.expiresAt) {
+        resetTokens.delete(token);
+        return res.status(400).json({ message: "Reset token has expired. Please request a new one." });
+      }
+
+      // Token is valid - delete it (single use)
+      resetTokens.delete(token);
 
       // Find user
       const user = await storage.getUserByEmail(email);
@@ -373,7 +402,8 @@ export async function registerRoutes(app: Express): Promise<Express> {
       const profile = await ensureUserProfile(payload);
       req.session.userId = profile.id;
       req.session.userRole = profile.role;
-      req.session.save(() => {
+      req.session.save((err) => {
+        if (err) { console.error('[Session] Save error:', err); }
         res.json({ user: profile });
       });
     } catch (error: any) {
@@ -461,6 +491,13 @@ export async function registerRoutes(app: Express): Promise<Express> {
   app.post("/api/rides", requireAuth, async (req, res) => {
     try {
       const rideData = insertRideSchema.parse(req.body);
+
+      // Ownership check: ride must belong to the authenticated user
+      const authUserId = getAuthUserId(req);
+      if (rideData.userId && rideData.userId !== authUserId) {
+        return res.status(403).json({ message: "Cannot create a ride for another user" });
+      }
+
       const ride = await storage.createRide(rideData);
       res.json(ride);
     } catch (error: any) {
@@ -472,6 +509,14 @@ export async function registerRoutes(app: Express): Promise<Express> {
   app.get("/api/rides/user/:userId", requireAuth, async (req, res) => {
     try {
       const { userId } = req.params;
+
+      // Ownership check: only the user themselves or an admin can view rides
+      const authUserId = getAuthUserId(req);
+      const authUserRole = getAuthUserRole(req);
+      if (userId !== authUserId && authUserRole !== "admin") {
+        return res.status(403).json({ message: "Forbidden: cannot access another user's rides" });
+      }
+
       const rides = await storage.getRidesByUser(userId);
       res.json(rides);
     } catch (error: any) {
@@ -495,6 +540,14 @@ export async function registerRoutes(app: Express): Promise<Express> {
   app.get("/api/rides/driver/:driverId", requireAuth, async (req, res) => {
     try {
       const { driverId } = req.params;
+
+      // Ownership check: only the driver themselves or an admin can view their rides
+      const authUserId = getAuthUserId(req);
+      const authUserRole = getAuthUserRole(req);
+      if (driverId !== authUserId && authUserRole !== "admin") {
+        return res.status(403).json({ message: "Forbidden: cannot access another driver's rides" });
+      }
+
       const rides = await storage.getRidesByDriver(driverId);
       res.json(rides);
     } catch (error: any) {
@@ -527,6 +580,14 @@ export async function registerRoutes(app: Express): Promise<Express> {
       throw ApiError.notFound("Ride");
     }
 
+    // Ownership check: only the ride's user, assigned driver, or admin can update
+    const authUserId = getAuthUserId(req);
+    const authUserRole = getAuthUserRole(req);
+    if (authUserId !== existingRide.userId && authUserId !== existingRide.driverId && authUserRole !== "admin") {
+      res.status(403).json({ message: "Forbidden: you are not authorized to update this ride" });
+      return;
+    }
+
     const ride = await storage.updateRide(id, updates);
     res.json({ success: true, data: ride });
   }));
@@ -535,6 +596,27 @@ export async function registerRoutes(app: Express): Promise<Express> {
   app.patch("/api/airbears/:id", requireAuth, asyncHandler(async (req, res, next) => {
     const { id } = req.params;
     const updates = updateAirbearSchema.parse(req.body);
+
+    // Get current airbear state for ownership check
+    const currentAirbear = (await storage.getAllAirbears()).find(a => a.id === id);
+
+    if (!currentAirbear) {
+      throw ApiError.notFound("Airbear");
+    }
+
+    // Ownership check: only the current driver, a driver claiming an unassigned airbear, or an admin
+    const authUserId = getAuthUserId(req);
+    const authUserRole = getAuthUserRole(req);
+    const currentDriverId = (currentAirbear as any).driverId || (currentAirbear as any).driver_id;
+    const isCurrentDriver = authUserId && authUserId === currentDriverId;
+    const isClaiming = !currentDriverId && ((updates as any).driverId || (updates as any).driver_id);
+    const isAdmin = authUserRole === "admin";
+
+    if (!isCurrentDriver && !isClaiming && !isAdmin) {
+      res.status(403).json({ message: "Forbidden: you are not authorized to update this airbear" });
+      return;
+    }
+
     const airbear = await storage.updateAirbear(id, updates);
     if (!airbear) {
       throw ApiError.notFound("Airbear");
@@ -578,6 +660,14 @@ export async function registerRoutes(app: Express): Promise<Express> {
   app.get("/api/orders/user/:userId", requireAuth, async (req, res) => {
     try {
       const { userId } = req.params;
+
+      // Ownership check: only the user themselves or an admin can view orders
+      const authUserId = getAuthUserId(req);
+      const authUserRole = getAuthUserRole(req);
+      if (userId !== authUserId && authUserRole !== "admin") {
+        return res.status(403).json({ message: "Forbidden: cannot access another user's orders" });
+      }
+
       const orders = await storage.getOrdersByUser(userId);
       res.json(orders);
     } catch (error: any) {
@@ -605,12 +695,18 @@ export async function registerRoutes(app: Express): Promise<Express> {
     try {
       const { amount, orderId, rideId, userId, paymentMethod = "stripe" } = req.body;
 
+      // Ownership check: userId must match the authenticated user
+      const authUserId = getAuthUserId(req);
+      if (userId && userId !== authUserId) {
+        return res.status(403).json({ message: "Forbidden: cannot create payment for another user" });
+      }
+
       if (!amount || amount <= 0) {
         return res.status(400).json({ message: "Invalid amount" });
       }
 
       if (paymentMethod === "cash") {
-        // For cash payments, generate QR code data
+        // For cash payments, generate QR code data with HMAC signature
         const qrData = {
           orderId,
           rideId,
@@ -620,8 +716,11 @@ export async function registerRoutes(app: Express): Promise<Express> {
           method: "cash"
         };
 
+        const signature = crypto.createHmac('sha256', qrSecret).update(JSON.stringify(qrData)).digest('hex');
+
         return res.json({
           qrCode: Buffer.from(JSON.stringify(qrData)).toString('base64'),
+          signature,
           paymentMethod: "cash"
         });
       }
@@ -724,10 +823,18 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
   app.post("/api/payments/confirm-cash", requireAuth, async (req, res) => {
     try {
-      const { qrCode, driverId } = req.body;
+      const { qrCode, signature, driverId } = req.body;
       if (!qrCode) return res.status(400).json({ message: "Missing QR code data" });
+      if (!signature) return res.status(400).json({ message: "Missing QR signature" });
 
       const decodedData = JSON.parse(Buffer.from(qrCode, 'base64').toString());
+
+      // Verify HMAC signature to ensure QR data was not tampered with
+      const expectedSignature = crypto.createHmac('sha256', qrSecret).update(JSON.stringify(decodedData)).digest('hex');
+      if (!crypto.timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expectedSignature, 'hex'))) {
+        return res.status(400).json({ message: "Invalid QR code signature - data may have been tampered with" });
+      }
+
       const { orderId, rideId, amount } = decodedData;
 
       if (orderId) {
@@ -798,6 +905,14 @@ export async function registerRoutes(app: Express): Promise<Express> {
   app.get("/api/users/:userId/free-ride-status", requireAuth, async (req, res) => {
     try {
       const { userId } = req.params;
+
+      // Ownership check: only the user themselves or an admin can check free ride status
+      const authUserId = getAuthUserId(req);
+      const authUserRole = getAuthUserRole(req);
+      if (userId !== authUserId && authUserRole !== "admin") {
+        return res.status(403).json({ message: "Forbidden: cannot access another user's free ride status" });
+      }
+
       const user = await storage.getUser(userId);
 
       if (!user) {

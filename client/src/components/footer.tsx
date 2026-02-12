@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { Twitter, Instagram, Facebook, Linkedin } from "lucide-react";
 import { AirBearMascot } from "@/components/airbear-mascot";
 
 export default function Footer() {
+  const [subscribed, setSubscribed] = useState(false);
   const quickLinks = [
     { name: "Book a Ride", href: "/map" },
     { name: "Shop Bodega", href: "/bodega" },
@@ -162,14 +164,12 @@ export default function Footer() {
                 onClick={() => {
                   const emailInput = document.getElementById('newsletter-email') as HTMLInputElement;
                   if (emailInput && emailInput.value) {
-                    alert(`Thank you for subscribing with ${emailInput.value}!`);
+                    setSubscribed(true);
                     emailInput.value = '';
-                  } else {
-                    alert('Please enter a valid email address');
                   }
                 }}
               >
-                Subscribe
+                {subscribed ? "Subscribed!" : "Subscribe"}
               </motion.button>
             </div>
           </div>
