@@ -263,10 +263,10 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-amber-500 mb-2">
-              #47
+              {user.ecoPoints > 0 ? `${user.ecoPoints} pts` : "New"}
             </div>
             <p className="text-sm text-muted-foreground">
-              Top eco-warrior
+              Eco Points
             </p>
           </CardContent>
         </Card>
@@ -495,8 +495,8 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-amber-500 mb-2">$12.4K</div>
-            <p className="text-sm text-muted-foreground">This month</p>
+            <div className="text-3xl font-bold text-amber-500 mb-2">{analytics?.totalAirbears || 0}</div>
+            <p className="text-sm text-muted-foreground">Total fleet</p>
           </CardContent>
         </Card>
 
@@ -508,8 +508,8 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-purple-500 mb-2">1.2K</div>
-            <p className="text-sm text-muted-foreground">Monthly active</p>
+            <div className="text-3xl font-bold text-purple-500 mb-2">{analytics?.totalSpots || 0}</div>
+            <p className="text-sm text-muted-foreground">Service locations</p>
           </CardContent>
         </Card>
       </motion.div>

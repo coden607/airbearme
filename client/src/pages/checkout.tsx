@@ -167,29 +167,19 @@ export default function Checkout() {
             });
           }
         })
-        .catch(() => {
-          // Fallback to demo data
-          setOrderData({
-            orderId: "demo_order",
-            rideId: "",
-            items: [{ name: "Demo Purchase", price: 4.00, quantity: 1 }],
-            subtotal: 4.00,
-            tax: 0.32,
-            total: 4.32,
-            isRide: false,
+        .catch((err) => {
+          console.error("[Checkout] Failed to load order:", err);
+          toast({
+            title: "Order not found",
+            description: "Could not load your order. Please try again.",
+            variant: "destructive",
           });
+          // Redirect back to bodega
+          window.location.href = "/bodega";
         });
     } else {
-      // Default demo data
-      setOrderData({
-        orderId: `demo_${Date.now()}`,
-        rideId: "",
-        items: [{ name: "AirBear Ride", price: 4.00, quantity: 1 }],
-        subtotal: 4.00,
-        tax: 0.32,
-        total: 4.32,
-        isRide: true,
-      });
+      // No valid checkout parameters - redirect to map
+      window.location.href = "/map";
     }
   }, []);
 
@@ -532,17 +522,32 @@ export default function Checkout() {
                     </div>
 
                     {/* Stripe Payment Form */}
-                    {clientSecret && clientSecret.startsWith('mock_') ? (
+                    {createPaymentIntentMutation.isError ? (
                       <div className="space-y-4 text-center p-6 border rounded-lg bg-muted/10">
                         <div className="flex justify-center mb-4">
                           <div className="bg-yellow-100 p-3 rounded-full">
                             <Zap className="h-6 w-6 text-yellow-600" />
                           </div>
                         </div>
-                        <h3 className="font-semibold text-lg">Payments Not Available</h3>
+                        <h3 className="font-semibold text-lg">Payment Setup Failed</h3>
                         <p className="text-sm text-muted-foreground mb-4">
-                          Payment processing is not configured. Please contact support or try again later.
+                          {createPaymentIntentMutation.error?.message || "Payment processing is not available. Please try again later."}
                         </p>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setClientSecret("");
+                            createPaymentIntentMutation.mutate({
+                              amount: orderData.total,
+                              orderId: orderData.orderId,
+                              rideId: orderData.rideId,
+                              userId: user?.id,
+                              paymentMethod,
+                            });
+                          }}
+                        >
+                          Retry Payment
+                        </Button>
                       </div>
                     ) : clientSecret ? (
                       <Elements stripe={stripePromise} options={{ clientSecret }}>

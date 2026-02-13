@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.warn('[Auth] Session fetch error:', error.message);
           throw error;
         }
-        
+
         const supabaseUser = data.session?.user;
         if (supabaseUser) {
           await syncProfile(supabaseUser);
@@ -158,25 +158,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
+      let supabaseSignInSuccess = false;
+
       // Sign in with Supabase client first to get JWT (needed for API auth on serverless)
       const client = getSupabaseClient(false);
       if (client) {
         try {
-          const { error } = await client.auth.signInWithPassword({ email, password });
+          const { data, error } = await client.auth.signInWithPassword({ email, password });
           if (error) {
             console.log("[Auth] Supabase client signIn failed:", error.message);
+          } else if (data.user) {
+            supabaseSignInSuccess = true;
           }
         } catch (e) {
           console.warn("[Auth] Supabase client signIn exception:", e);
         }
       }
 
-      // Then call API login (sets session cookie for non-serverless, returns user data)
+      // Call API login with JWT if available (sets session cookie for non-serverless)
       const authHeaders: Record<string, string> = { "Content-Type": "application/json" };
       try {
-        const client = getSupabaseClient(false);
-        if (client) {
-          const { data: sessionData } = await client.auth.getSession();
+        const sbClient = getSupabaseClient(false);
+        if (sbClient) {
+          const { data: sessionData } = await sbClient.auth.getSession();
           if (sessionData.session?.access_token) {
             authHeaders["Authorization"] = `Bearer ${sessionData.session.access_token}`;
           }
@@ -190,25 +194,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Login failed");
+      if (response.ok) {
+        const data = await response.json();
+        const loginUser: User = {
+          id: data.user.id,
+          email: data.user.email,
+          username: data.user.username,
+          role: data.user.role || "user",
+          ecoPoints: data.user.ecoPoints || 0,
+          totalRides: data.user.totalRides || 0,
+          co2Saved: data.user.co2Saved || "0",
+          fullName: data.user.fullName,
+          avatarUrl: data.user.avatarUrl,
+        };
+        setUser(loginUser);
+        localStorage.setItem("airbear-user", JSON.stringify(loginUser));
+        return;
       }
 
-      const loginUser: User = {
-        id: data.user.id,
-        email: data.user.email,
-        username: data.user.username,
-        role: data.user.role || "user",
-        ecoPoints: data.user.ecoPoints || 0,
-        totalRides: data.user.totalRides || 0,
-        co2Saved: data.user.co2Saved || "0",
-        fullName: data.user.fullName,
-        avatarUrl: data.user.avatarUrl,
-      };
-      setUser(loginUser);
-      localStorage.setItem("airbear-user", JSON.stringify(loginUser));
+      // If server login failed but Supabase signIn succeeded, sync profile as fallback
+      if (supabaseSignInSuccess && client) {
+        try {
+          const { data: sessionData } = await client.auth.getSession();
+          if (sessionData.session?.user) {
+            await syncProfile(sessionData.session.user);
+            console.log("[Auth] Login via Supabase sync-profile fallback");
+            return;
+          }
+        } catch (e) {
+          console.warn("[Auth] Supabase sync-profile fallback failed:", e);
+        }
+      }
+
+      const data = await response.json().catch(() => ({ message: "Login failed" }));
+      throw new Error(data.message || "Login failed");
     } catch (error: any) {
       throw new Error(error.message || "Login failed");
     } finally {
@@ -230,7 +249,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Create user via API endpoint (this already creates Supabase auth user + profile)
-      // apiRequest throws on non-OK responses, so we wrap in try/catch for better error messages
       let registerData: any;
       try {
         const registerResponse = await fetch("/api/auth/register", {

@@ -221,7 +221,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
       req.session.userRole = profile.role;
       req.session.save((err) => {
         if (err) { console.error('[Session] Save error:', err); }
-        res.json({ user: { id: profile.id, email: profile.email, username: profile.username, role: profile.role } });
+        res.json({ user: { id: profile.id, email: profile.email, username: profile.username, role: profile.role, ecoPoints: profile.ecoPoints, totalRides: profile.totalRides, co2Saved: profile.co2Saved } });
       });
     } catch (error: any) {
       logRouteError(req, error);
@@ -239,6 +239,20 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
       console.log(`[Auth] Login attempt for: ${email}`);
 
+      const sendLoginSuccess = (user: { id: string; email: string; username: string; role: string; ecoPoints: number; totalRides: number; co2Saved: string }) => {
+        req.session.userId = user.id;
+        req.session.userRole = user.role;
+        req.session.save((err) => {
+          if (err) { console.error('[Session] Save error:', err); }
+          res.json({ user });
+        });
+      };
+
+      const toUserResponse = (profile: any) => ({
+        id: profile.id, email: profile.email, username: profile.username,
+        role: profile.role, ecoPoints: profile.ecoPoints, totalRides: profile.totalRides, co2Saved: profile.co2Saved,
+      });
+
       // Try Supabase auth first if available (use anon client, fallback to admin for verification)
       const authClient = supabaseAuth || supabaseAdmin;
       if (authClient) {
@@ -255,12 +269,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
               role: (data.user.user_metadata?.role as "user" | "driver" | "admin" | undefined) || "user",
               avatarUrl: (data.user.user_metadata?.avatar_url as string | undefined) || null,
             });
-            req.session.userId = profile.id;
-            req.session.userRole = profile.role;
-            return req.session.save((err) => {
-              if (err) { console.error('[Session] Save error:', err); }
-              res.json({ user: { id: profile.id, email: profile.email, username: profile.username, role: profile.role, ecoPoints: profile.ecoPoints, totalRides: profile.totalRides, co2Saved: profile.co2Saved } });
-            });
+            return sendLoginSuccess(toUserResponse(profile));
           }
 
           if (error) {
@@ -273,17 +282,25 @@ export async function registerRoutes(app: Express): Promise<Express> {
         console.log(`[Auth] Supabase clients not configured`);
       }
 
-      // Fallback to local storage auth
+      // Fallback: verify password hash stored in users table
       if (storage.verifyPassword) {
         const user = await storage.verifyPassword(email, password);
         if (user) {
-          console.log(`[Auth] Local storage auth success for: ${email}`);
-          req.session.userId = user.id;
-          req.session.userRole = user.role;
-          return req.session.save((err) => {
-            if (err) { console.error('[Session] Save error:', err); }
-            res.json({ user: { id: user.id, email: user.email, username: user.username, role: user.role, ecoPoints: user.ecoPoints, totalRides: user.totalRides, co2Saved: user.co2Saved } });
-          });
+          console.log(`[Auth] Password hash auth success for: ${email}`);
+          return sendLoginSuccess(toUserResponse(user));
+        }
+      }
+
+      // Fallback: verify with Supabase admin (getUser by email, then try signIn with service key)
+      if (supabaseAdmin) {
+        try {
+          const { data: userData } = await supabaseAdmin.from("users").select("*").eq("email", email).maybeSingle();
+          if (userData) {
+            // User exists in DB but neither auth method worked
+            console.log(`[Auth] User exists in DB but auth failed for: ${email}`);
+          }
+        } catch (e) {
+          // ignore
         }
       }
 
@@ -597,7 +614,19 @@ export async function registerRoutes(app: Express): Promise<Express> {
       return;
     }
 
-    const ride = await storage.updateRide(id, updates);
+    // Auto-set timestamps based on status transitions
+    const enrichedUpdates: Record<string, any> = { ...updates };
+    if ((updates as any).status === "accepted" && !existingRide.acceptedAt) {
+      enrichedUpdates.acceptedAt = new Date().toISOString();
+    }
+    if ((updates as any).status === "in_progress" && !existingRide.startedAt) {
+      enrichedUpdates.startedAt = new Date().toISOString();
+    }
+    if ((updates as any).status === "completed" && !existingRide.completedAt) {
+      enrichedUpdates.completedAt = new Date().toISOString();
+    }
+
+    const ride = await storage.updateRide(id, enrichedUpdates);
     res.json({ success: true, data: ride });
   }));
 
@@ -692,6 +721,14 @@ export async function registerRoutes(app: Express): Promise<Express> {
       if (!order) {
         return res.status(404).json({ message: "Order not found" });
       }
+
+      // Ownership check: only the order owner or an admin can view
+      const authUserId = getAuthUserId(req);
+      const authUserRole = getAuthUserRole(req);
+      if (order.userId !== authUserId && authUserRole !== "admin") {
+        return res.status(403).json({ message: "Forbidden: cannot access another user's order" });
+      }
+
       res.json(order);
     } catch (error: any) {
       logRouteError(req, error);

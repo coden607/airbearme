@@ -12,6 +12,10 @@
 ALTER TABLE users
 ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 
+-- Add password_hash for local auth fallback
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS password_hash TEXT;
+
 -- Add all other potentially missing columns
 ALTER TABLE users
 ADD COLUMN IF NOT EXISTS full_name TEXT,
@@ -24,6 +28,9 @@ ADD COLUMN IF NOT EXISTS has_ceo_tshirt BOOLEAN DEFAULT false,
 ADD COLUMN IF NOT EXISTS tshirt_purchase_date TIMESTAMP,
 ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW(),
 ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+
+-- Create index for faster email lookups
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 
 -- ================================================
 -- STEP 2: Fix Bodega Items Table
