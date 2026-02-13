@@ -580,10 +580,19 @@ export async function registerRoutes(app: Express): Promise<Express> {
       throw ApiError.notFound("Ride");
     }
 
-    // Ownership check: only the ride's user, assigned driver, or admin can update
+    // Ownership check:
+    // - The ride's user can update their own ride
+    // - The assigned driver can update the ride
+    // - A driver can accept a pending ride (status change to 'accepted' with driverId set)
+    // - An admin can update any ride
     const authUserId = getAuthUserId(req);
     const authUserRole = getAuthUserRole(req);
-    if (authUserId !== existingRide.userId && authUserId !== existingRide.driverId && authUserRole !== "admin") {
+    const isRideOwner = authUserId === existingRide.userId;
+    const isAssignedDriver = existingRide.driverId && authUserId === existingRide.driverId;
+    const isDriverAccepting = authUserRole === "driver" && existingRide.status === "pending" && updates.status === "accepted" && updates.driverId === authUserId;
+    const isAdmin = authUserRole === "admin";
+
+    if (!isRideOwner && !isAssignedDriver && !isDriverAccepting && !isAdmin) {
       res.status(403).json({ message: "Forbidden: you are not authorized to update this ride" });
       return;
     }

@@ -24,6 +24,9 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false }));
 
+// Trust proxy for Vercel (HTTPS terminates at the edge)
+app.set('trust proxy', 1);
+
 // Session middleware for server-side auth
 app.use(session({
   secret: env.SESSION_SECRET || "dev-session-secret-change-in-production",
@@ -122,13 +125,14 @@ const devCsp = {
       }
 };
 
-// Define strict CSP for production
+// Define CSP for production - need unsafe-inline for Vite-injected styles and inline scripts
 const prodCsp = {
   ...devCsp,
   directives: {
     ...devCsp.directives,
     scriptSrc: [
       "'self'",
+      "'unsafe-inline'",
       "https://js.stripe.com",
       "https://unpkg.com",
       "https://vercel.live",
@@ -136,6 +140,7 @@ const prodCsp = {
     ],
     scriptSrcElem: [
       "'self'",
+      "'unsafe-inline'",
       "https://js.stripe.com",
       "https://unpkg.com",
       "https://vercel.live",

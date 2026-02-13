@@ -22,13 +22,18 @@ export default function Header() {
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const navigation = [
+  const baseNavigation = [
     { name: "Rides", href: "/map", Icon: Map },
     { name: "Bodega", href: "/bodega", Icon: Store },
     { name: "Challenges", href: "/challenges", Icon: Trophy },
     { name: "Rewards", href: "/rewards", Icon: Gift },
     { name: "Impact", href: "/", Icon: Leaf, scrollTo: "eco" },
   ];
+
+  // Add driver dashboard link for drivers
+  const navigation = user?.role === "driver"
+    ? [...baseNavigation, { name: "Driver", href: "/driver-dashboard", Icon: Map }]
+    : baseNavigation;
 
   const isActive = (href: string) => {
     if (href.startsWith("/#")) {

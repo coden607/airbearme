@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { getSupabaseClient } from "@/lib/supabase-client";
+import { authFetch } from "@/lib/queryClient";
 import AirbearWheel from "@/components/airbear-wheel";
 import { AirBearMascot } from "@/components/airbear-mascot";
 import LoadingSpinner from "@/components/loading-spinner";
@@ -51,15 +51,13 @@ export default function Dashboard() {
   const { data: rides, isLoading: ridesLoading } = useQuery<any[]>({
     queryKey: ["rides", user?.id],
     queryFn: async () => {
-      const supabase = getSupabaseClient(false);
-      if (!supabase) return [];
-      const { data, error } = await supabase
-        .from('rides')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('requested_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
+      try {
+        const res = await authFetch(`/api/rides/user/${user?.id}`);
+        if (!res.ok) return [];
+        return res.json();
+      } catch {
+        return [];
+      }
     },
     enabled: !!user?.id,
   });
@@ -67,15 +65,13 @@ export default function Dashboard() {
   const { data: orders, isLoading: ordersLoading } = useQuery({
     queryKey: ["orders", user?.id],
     queryFn: async () => {
-      const supabase = getSupabaseClient(false);
-      if (!supabase) return [];
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
+      try {
+        const res = await authFetch(`/api/orders/user/${user?.id}`);
+        if (!res.ok) return [];
+        return res.json();
+      } catch {
+        return [];
+      }
     },
     enabled: !!user?.id,
   });
@@ -83,33 +79,13 @@ export default function Dashboard() {
   const { data: analytics } = useQuery<Analytics>({
     queryKey: ["analytics", "overview"],
     queryFn: async () => {
-      // Use the server API which works with both Supabase and MemStorage
-      const response = await fetch('/api/analytics/overview');
-      if (response.ok) {
-        return response.json();
-      }
-      // Fallback to direct Supabase if API fails
-      const supabase = getSupabaseClient(false);
-      if (!supabase) {
-        return { totalSpots: 0, totalAirbears: 0, activeAirbears: 0, chargingAirbears: 0, maintenanceAirbears: 0, averageBatteryLevel: 0 };
-      }
-
-      const [spotsRes, airbearsRes] = await Promise.all([
-        supabase.from('spots').select('id', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('airbears').select('*')
-      ]);
-
-      const airbears = airbearsRes.data || [];
-      return {
-        totalSpots: spotsRes.count || 0,
-        totalAirbears: airbears.length,
-        activeAirbears: airbears.filter((a: any) => a.is_available).length,
-        chargingAirbears: airbears.filter((a: any) => a.is_charging).length,
-        maintenanceAirbears: 0,
-        averageBatteryLevel: airbears.length > 0
-          ? Math.round(airbears.reduce((sum: number, a: any) => sum + (a.battery_level || 0), 0) / airbears.length)
-          : 0
-      };
+      try {
+        const response = await fetch('/api/analytics/overview');
+        if (response.ok) {
+          return response.json();
+        }
+      } catch {}
+      return { totalSpots: 0, totalAirbears: 0, activeAirbears: 0, chargingAirbears: 0, maintenanceAirbears: 0, averageBatteryLevel: 0 };
     }
   });
 
