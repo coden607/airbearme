@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { assertSupabase, getSupabaseClient } from "@/lib/supabase-client";
+import { getSupabaseClient } from "@/lib/supabase-client";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 interface User {
@@ -172,28 +172,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Then call API login (sets session cookie for non-serverless, returns user data)
-      const response = await apiRequest("POST", "/api/auth/login", { email, password });
+      const authHeaders: Record<string, string> = { "Content-Type": "application/json" };
+      try {
+        const client = getSupabaseClient(false);
+        if (client) {
+          const { data: sessionData } = await client.auth.getSession();
+          if (sessionData.session?.access_token) {
+            authHeaders["Authorization"] = `Bearer ${sessionData.session.access_token}`;
+          }
+        }
+      } catch {}
 
-      if (response.ok) {
-        const data = await response.json();
-        const loginUser: User = {
-          id: data.user.id,
-          email: data.user.email,
-          username: data.user.username,
-          role: data.user.role || "user",
-          ecoPoints: data.user.ecoPoints || 0,
-          totalRides: data.user.totalRides || 0,
-          co2Saved: data.user.co2Saved || "0",
-          fullName: data.user.fullName,
-          avatarUrl: data.user.avatarUrl,
-        };
-        setUser(loginUser);
-        localStorage.setItem("airbear-user", JSON.stringify(loginUser));
-        return;
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: authHeaders,
+        credentials: "include",
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Login failed");
       }
 
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Login failed");
+      const loginUser: User = {
+        id: data.user.id,
+        email: data.user.email,
+        username: data.user.username,
+        role: data.user.role || "user",
+        ecoPoints: data.user.ecoPoints || 0,
+        totalRides: data.user.totalRides || 0,
+        co2Saved: data.user.co2Saved || "0",
+        fullName: data.user.fullName,
+        avatarUrl: data.user.avatarUrl,
+      };
+      setUser(loginUser);
+      localStorage.setItem("airbear-user", JSON.stringify(loginUser));
     } catch (error: any) {
       throw new Error(error.message || "Login failed");
     } finally {
@@ -214,48 +229,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("Password must be at least 6 characters");
       }
 
-      // First, try to create user via API endpoint (works with both Supabase and MemStorage)
-      const registerResponse = await apiRequest("POST", "/api/auth/register", {
-        email: userData.email,
-        username: userData.username,
-        password: userData.password,
-        confirmPassword: userData.confirmPassword,
-        role: userData.role,
-        fullName: userData.username,
-      });
-
-      if (!registerResponse.ok) {
-        const errorData = await registerResponse.json();
-        throw new Error(errorData.message || "Registration failed");
-      }
-
-      const registerData = await registerResponse.json();
-
-      // Then try Supabase authentication if available
+      // Create user via API endpoint (this already creates Supabase auth user + profile)
+      // apiRequest throws on non-OK responses, so we wrap in try/catch for better error messages
+      let registerData: any;
       try {
-        const client = assertSupabase();
-        const { data, error } = await client.auth.signUp({
-          email: userData.email,
-          password: userData.password,
-          options: {
-            data: {
-              username: userData.username,
-              role: userData.role,
-              fullName: userData.username,
-            },
-            emailRedirectTo: `${window.location.origin}/auth`,
-          },
+        const registerResponse = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            email: userData.email,
+            username: userData.username,
+            password: userData.password,
+            confirmPassword: userData.confirmPassword,
+            role: userData.role,
+            fullName: userData.username,
+          }),
         });
 
-        if (error || !data.user) {
-          console.warn("Supabase auth signUp failed, but user was created in storage:", error?.message);
-          // Continue even if Supabase auth fails, since we have the user in our storage
-        } else {
-          await syncProfile(data.user);
+        registerData = await registerResponse.json();
+
+        if (!registerResponse.ok) {
+          throw new Error(registerData.message || "Registration failed");
+        }
+      } catch (fetchError: any) {
+        throw new Error(fetchError.message || "Registration failed");
+      }
+
+      // Sign into Supabase client-side to get a JWT for future API calls
+      // The server already created the Supabase auth user, so we just sign in
+      try {
+        const client = getSupabaseClient(false);
+        if (client) {
+          const { error } = await client.auth.signInWithPassword({
+            email: userData.email,
+            password: userData.password,
+          });
+          if (error) {
+            console.warn("[Auth] Supabase client sign-in after register failed:", error.message);
+          }
         }
       } catch (supabaseError: any) {
-        console.warn("Supabase authentication error (user still created in storage):", supabaseError.message);
-        // Continue with the user we created via API
+        console.warn("[Auth] Supabase client sign-in error (non-critical):", supabaseError.message);
       }
 
       // Set the user from the API response

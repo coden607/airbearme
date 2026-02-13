@@ -27,6 +27,14 @@ const requiredGroups = [
     name: 'server:supabase-service-key',
     keys: ['SUPABASE_SERVICE_ROLE_KEY'],
   },
+  {
+    name: 'server:supabase-anon-key',
+    keys: ['SUPABASE_ANON_KEY'],
+  },
+  {
+    name: 'server:session-secret',
+    keys: ['SESSION_SECRET'],
+  },
 ];
 
 const missing = [];
