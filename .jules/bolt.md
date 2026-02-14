@@ -1,3 +1,7 @@
 ## 2024-05-23 - Atomic Commits
 **Learning:** Installing dependencies with `pnpm install` can generate a `pnpm-lock.yaml` file. Including this file in a commit for a specific, unrelated optimization violates the principle of atomic commits. It introduces noise, makes the change harder to review, and mixes dependency management with feature/performance work.
 **Action:** Always review the changed files before finalizing a commit. Exclude any files that are not directly related to the core task, especially auto-generated lock files. If a lock file needs to be updated or created, it should be done in a separate, dedicated commit.
+
+## 2025-01-24 - Map Page Bottleneck & CI Artifacts
+**Learning:** Filtering the entire fleet of AirBears for every spot on the map created an O(Spots * AirBears) bottleneck, causing lag during data refreshes. Additionally, build artifacts like `airbear-pwa.tar.gz` and `workbox-*.js` in the root directory, along with `pnpm-lock.yaml`, cause failures in the 'Workers Builds' CI check which expects only `package-lock.json` and no extraneous archives.
+**Action:** Use `useMemo` to group arrays into Maps for O(1) lookups in render loops. Ensure the root directory is clean of build artifacts and incompatible lock files before submitting.

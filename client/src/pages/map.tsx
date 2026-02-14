@@ -137,6 +137,8 @@ interface Airbear {
   isCharging: boolean;
 }
 
+const isAirbearAvailable = (a: Airbear) => a.isAvailable && !a.isCharging && a.batteryLevel > 20;
+
 export default function Map() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -263,8 +265,24 @@ export default function Map() {
     return spotsData.filter((spot) => spot.isActive !== false);
   }, [spotsData]);
 
-  const isAirbearAvailable = (a: any) => a.isAvailable && !a.isCharging && (a.batteryLevel ?? a.battery_level ?? 100) > 20;
-  const availableAirbearsCount = airbears.filter(isAirbearAvailable).length;
+  // Memoize airbears grouped by spot for O(1) lookup
+  // This reduces complexity from O(Spots * Airbears) to O(Spots + Airbears)
+  const airbearsBySpot = useMemo(() => {
+    const map = new globalThis.Map<string, Airbear[]>();
+    airbears.forEach(a => {
+      if (a.currentSpotId && isAirbearAvailable(a)) {
+        const list = map.get(a.currentSpotId) || [];
+        list.push(a);
+        map.set(a.currentSpotId, list);
+      }
+    });
+    return map;
+  }, [airbears]);
+
+  const availableAirbearsCount = useMemo(() =>
+    airbears.filter(isAirbearAvailable).length,
+    [airbears]
+  );
 
   // Initialize map
   useEffect(() => {
@@ -339,7 +357,7 @@ export default function Map() {
       const lng = Number(spot.longitude);
       if (isNaN(lat) || isNaN(lng)) return;
 
-      const availableHere = airbears.filter(a => a.currentSpotId === spot.id && isAirbearAvailable(a));
+      const availableHere = airbearsBySpot.get(spot.id) || [];
       const hasAirbears = availableHere.length > 0;
       const color = hasAirbears ? '#10b981' : '#6b7280';
 
@@ -691,7 +709,7 @@ export default function Map() {
         {/* Spots Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {activeSpots.map((spot) => {
-            const available = airbears.filter(a => a.currentSpotId === spot.id && isAirbearAvailable(a));
+            const available = airbearsBySpot.get(spot.id) || [];
             const hasAirbears = available.length > 0;
 
             return (
