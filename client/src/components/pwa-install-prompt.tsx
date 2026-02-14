@@ -77,9 +77,10 @@ export default function PWAInstallPrompt() {
         <div className="bg-gradient-to-r from-emerald-500 to-lime-500 rounded-2xl p-4 shadow-2xl border-2 border-white/20">
           <button
             onClick={handleDismiss}
+            aria-label="Dismiss install prompt"
             className="absolute top-2 right-2 p-1 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
           >
-            <X className="w-4 h-4 text-white" />
+            <X className="w-4 h-4 text-white" aria-hidden="true" />
           </button>
 
           <div className="flex items-center gap-4">
@@ -100,7 +101,7 @@ export default function PWAInstallPrompt() {
           {!isIOS && deferredPrompt && (
             <Button
               onClick={handleInstall}
-              className="w-full mt-3 bg-white text-emerald-600 hover:bg-white/90 font-bold"
+              className="w-full mt-3 bg-white text-emerald-800 hover:bg-white/90 font-bold"
             >
               <Download className="w-4 h-4 mr-2" />
               Install Now - It's Free!
