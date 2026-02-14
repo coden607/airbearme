@@ -632,6 +632,8 @@ class MemStorage implements IStorage {
       isCharging: insertAirbear.isCharging || false,
       maintenanceStatus: insertAirbear.maintenanceStatus || "good",
       totalDistance: "0",
+      capacity: insertAirbear.capacity ?? 5,
+      currentRiders: insertAirbear.currentRiders ?? 0,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -667,6 +669,7 @@ class MemStorage implements IStorage {
       driverId: insertRide.driverId || null,
       airbearId: insertRide.airbearId || null,
       status: insertRide.status || "pending",
+      passengers: insertRide.passengers ?? 1,
       fare: insertRide.fare || "0",
       distance: insertRide.distance || null,
       estimatedDuration: insertRide.estimatedDuration || null,
