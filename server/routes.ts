@@ -4,9 +4,7 @@ import { insertRideSchema, insertOrderSchema, insertPaymentSchema, updateRideSch
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { getActiveSpotsData } from "../shared/spots-data.js";
-import { env, ApiError, asyncHandler, requireAuth, requireAdmin } from "./utils.js";
-import bcrypt from "bcryptjs";
-import crypto from "crypto";
+import { env, ApiError, asyncHandler, requireAuth, requireAdmin, hmacSha256, safeCompare } from "./utils.js";
 
 
 const logRouteError = (req: Request, error: unknown) => {
@@ -24,7 +22,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   const resetTokens = new Map<string, { email: string; expiresAt: number }>();
 
   // HMAC secret for signing cash QR codes
-  const qrSecret = env.QR_HMAC_SECRET || crypto.randomUUID();
+  const qrSecret = env.QR_HMAC_SECRET || globalThis.crypto.randomUUID();
 
   const supabaseUrl = env.SUPABASE_URL;
   const supabaseServiceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
@@ -591,6 +589,18 @@ export async function registerRoutes(app: Express): Promise<Express> {
       if (!ride) {
         return res.status(404).json({ message: "Ride not found" });
       }
+
+      // Ownership check: only the user who requested the ride, the assigned driver, or an admin
+      const authUserId = getAuthUserId(req);
+      const authUserRole = getAuthUserRole(req);
+      const isOwner = ride.userId === authUserId;
+      const isDriver = ride.driverId === authUserId;
+      const isAdmin = authUserRole === "admin";
+
+      if (!isOwner && !isDriver && !isAdmin) {
+        return res.status(403).json({ message: "Forbidden: you are not authorized to view this ride" });
+      }
+
       res.json(ride);
     } catch (error: any) {
       logRouteError(req, error);
@@ -698,6 +708,13 @@ export async function registerRoutes(app: Express): Promise<Express> {
             ? req.body.totalAmount.toFixed(2)
             : req.body?.totalAmount,
       });
+
+      // Ownership check: userId must match the authenticated user
+      const authUserId = getAuthUserId(req);
+      if (orderData.userId !== authUserId) {
+        return res.status(403).json({ message: "Forbidden: cannot create order for another user" });
+      }
+
       const order = await storage.createOrder(orderData);
       res.json(order);
     } catch (error: any) {
@@ -773,7 +790,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
           method: "cash"
         };
 
-        const signature = crypto.createHmac('sha256', qrSecret).update(JSON.stringify(qrData)).digest('hex');
+        const signature = await hmacSha256(qrSecret, JSON.stringify(qrData));
 
         return res.json({
           qrCode: Buffer.from(JSON.stringify(qrData)).toString('base64'),
@@ -870,6 +887,13 @@ export async function registerRoutes(app: Express): Promise<Express> {
   app.post("/api/payments/confirm", requireAuth, async (req, res) => {
     try {
       const paymentData = insertPaymentSchema.parse(req.body);
+
+      // Ownership check: userId must match the authenticated user
+      const authUserId = getAuthUserId(req);
+      if (paymentData.userId !== authUserId) {
+        return res.status(403).json({ message: "Forbidden: cannot confirm payment for another user" });
+      }
+
       const payment = await storage.createPayment(paymentData);
       res.json(payment);
     } catch (error: any) {
@@ -887,8 +911,8 @@ export async function registerRoutes(app: Express): Promise<Express> {
       const decodedData = JSON.parse(Buffer.from(qrCode, 'base64').toString());
 
       // Verify HMAC signature to ensure QR data was not tampered with
-      const expectedSignature = crypto.createHmac('sha256', qrSecret).update(JSON.stringify(decodedData)).digest('hex');
-      if (!crypto.timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expectedSignature, 'hex'))) {
+      const expectedSignature = await hmacSha256(qrSecret, JSON.stringify(decodedData));
+      if (!safeCompare(signature, expectedSignature)) {
         return res.status(400).json({ message: "Invalid QR code signature - data may have been tampered with" });
       }
 
@@ -923,6 +947,12 @@ export async function registerRoutes(app: Express): Promise<Express> {
   app.post("/api/ceo-tshirt/purchase", requireAuth, async (req, res) => {
     try {
       const { userId, size } = req.body;
+
+      // Ownership check: userId must match the authenticated user
+      const authUserId = getAuthUserId(req);
+      if (!userId || userId !== authUserId) {
+        return res.status(403).json({ message: "Forbidden: cannot purchase for another user" });
+      }
 
       // Check if Stripe is configured
       if (!stripe) {
@@ -1203,6 +1233,12 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
       if (!userId) {
         return res.status(400).json({ message: "User ID required" });
+      }
+
+      // Ownership check: userId must match the authenticated user
+      const authUserId = getAuthUserId(req);
+      if (userId !== authUserId) {
+        return res.status(403).json({ message: "Forbidden: cannot request notifications for another user" });
       }
 
       // In a real app, this would:

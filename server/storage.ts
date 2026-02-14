@@ -1,6 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import bcrypt from "bcryptjs";
-import { env } from "./utils.js";
+import { env, hashPassword, comparePassword } from "./utils.js";
 import {
   User, InsertUser,
   Spot, InsertSpot,
@@ -230,12 +229,12 @@ class MemStorage implements IStorage {
     if (!user) return null;
     const storedHash = this.userPasswords.get(user.id);
     if (!storedHash) return null;
-    const isMatch = await bcrypt.compare(password, storedHash);
+    const isMatch = await comparePassword(password, storedHash);
     return isMatch ? user : null;
   }
 
   async setPassword(userId: string, password: string): Promise<void> {
-    const hash = await bcrypt.hash(password, 10);
+    const hash = await hashPassword(password);
     this.userPasswords.set(userId, hash);
   }
 
@@ -816,7 +815,7 @@ class SupabaseStorage implements IStorage {
           .maybeSingle();
 
         if (hashData?.password_hash) {
-          const isMatch = await bcrypt.compare(password, hashData.password_hash);
+          const isMatch = await comparePassword(password, hashData.password_hash);
           if (isMatch) {
             return normalizeUserRow(data);
           }
@@ -834,7 +833,7 @@ class SupabaseStorage implements IStorage {
 
   async setPassword(userId: string, password: string): Promise<void> {
     try {
-      const passwordHash = await bcrypt.hash(password, 10);
+      const passwordHash = await hashPassword(password);
       const { error } = await this.supabase
         .from("users")
         .update({ password_hash: passwordHash })

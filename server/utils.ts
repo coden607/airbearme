@@ -186,6 +186,109 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   res.status(401).json({ success: false, message: err.message, code: err.code } as ErrorResponse);
 }
 
+/**
+ * Constant-time string comparison to prevent timing attacks.
+ */
+export function safeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
+
+/**
+ * Environment-agnostic password hashing using PBKDF2 (Web Crypto API).
+ */
+export async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const salt = globalThis.crypto.getRandomValues(new Uint8Array(16));
+  const keyMaterial = await globalThis.crypto.subtle.importKey(
+    "raw",
+    encoder.encode(password),
+    { name: "PBKDF2" },
+    false,
+    ["deriveBits"]
+  );
+  const hash = await globalThis.crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt,
+      iterations: 100000,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    256
+  );
+
+  const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
+  const hashHex = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+  return `pbkdf2:100000:${saltHex}:${hashHex}`;
+}
+
+/**
+ * Environment-agnostic password verification. Supports legacy bcrypt hashes.
+ */
+export async function comparePassword(password: string, hash: string): Promise<boolean> {
+  if (hash.startsWith("pbkdf2:")) {
+    const parts = hash.split(":");
+    if (parts.length !== 4) return false;
+    const [_, iterations, saltHex, hashHex] = parts;
+
+    const encoder = new TextEncoder();
+    const salt = new Uint8Array(saltHex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
+    const keyMaterial = await globalThis.crypto.subtle.importKey(
+      "raw",
+      encoder.encode(password),
+      { name: "PBKDF2" },
+      false,
+      ["deriveBits"]
+    );
+    const derivedHash = await globalThis.crypto.subtle.deriveBits(
+      {
+        name: "PBKDF2",
+        salt,
+        iterations: parseInt(iterations),
+        hash: "SHA-256",
+      },
+      keyMaterial,
+      256
+    );
+    const derivedHex = Array.from(new Uint8Array(derivedHash)).map(b => b.toString(16).padStart(2, '0')).join('');
+    return safeCompare(derivedHex, hashHex);
+  }
+
+  // Fallback to bcrypt for legacy hashes (hash_ prefix or no prefix)
+  try {
+    const bcrypt = await import("bcryptjs");
+    return await bcrypt.compare(password, hash.replace(/^hash_/, ""));
+  } catch {
+    // In edge runtimes where bcryptjs might fail or not be available
+    return false;
+  }
+}
+
+/**
+ * Environment-agnostic HMAC-SHA256.
+ */
+export async function hmacSha256(key: string, data: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const cryptoKey = await globalThis.crypto.subtle.importKey(
+    "raw",
+    encoder.encode(key),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signature = await globalThis.crypto.subtle.sign(
+    "HMAC",
+    cryptoKey,
+    encoder.encode(data)
+  );
+  return Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 // Admin middleware: requires auth + admin role
 export async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   // 1. Check session
