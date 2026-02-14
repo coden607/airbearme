@@ -6,6 +6,8 @@ import { AirBearMascot } from "@/components/airbear-mascot";
 
 export default function Footer() {
   const [subscribed, setSubscribed] = useState(false);
+  const [email, setEmail] = useState("");
+
   const quickLinks = [
     { name: "Book a Ride", href: "/map" },
     { name: "Shop Bodega", href: "/bodega" },
@@ -19,6 +21,13 @@ export default function Footer() {
     { name: "Privacy Policy", href: "/privacy" },
     { name: "Terms of Service", href: "/terms" },
   ];
+
+  const handleSubscribe = () => {
+    if (email) {
+      setSubscribed(true);
+      setEmail("");
+    }
+  };
 
   return (
     <footer className="relative bg-gradient-to-br from-emerald-900 via-green-800 to-lime-900 text-white">
@@ -54,6 +63,7 @@ export default function Footer() {
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
                 data-testid="link-twitter"
+                aria-label="Follow us on Twitter"
               >
                 <Twitter className="h-4 w-4" />
               </motion.a>
@@ -63,6 +73,7 @@ export default function Footer() {
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
                 data-testid="link-instagram"
+                aria-label="Follow us on Instagram"
               >
                 <Instagram className="h-4 w-4" />
               </motion.a>
@@ -72,6 +83,7 @@ export default function Footer() {
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
                 data-testid="link-facebook"
+                aria-label="Follow us on Facebook"
               >
                 <Facebook className="h-4 w-4" />
               </motion.a>
@@ -81,6 +93,7 @@ export default function Footer() {
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
                 data-testid="link-linkedin"
+                aria-label="Follow us on LinkedIn"
               >
                 <Linkedin className="h-4 w-4" />
               </motion.a>
@@ -99,7 +112,7 @@ export default function Footer() {
               {quickLinks.map((link) => (
                 <li key={link.name}>
                   <Link
-                    to={link.href}
+                    href={link.href}
                     className="text-emerald-200 hover:text-white transition-colors cursor-pointer inline-block hover:translate-x-1"
                     data-testid={`footer-link-${link.name.toLowerCase().replace(/\s+/g, '-')}`}
                   >
@@ -122,7 +135,7 @@ export default function Footer() {
               {supportLinks.map((link) => (
                 <li key={link.name}>
                   <Link
-                    to={link.href}
+                    href={link.href}
                     className="text-emerald-200 hover:text-white transition-colors cursor-pointer inline-block hover:translate-x-1"
                     data-testid={`footer-support-${link.name.toLowerCase().replace(/\s+/g, '-')}`}
                   >
@@ -148,29 +161,36 @@ export default function Footer() {
               <p className="text-emerald-200">Get the latest news about sustainable transportation</p>
             </div>
             
-            <div className="flex space-x-2 w-full md:w-auto">
-              <input 
-                type="email" 
-                placeholder="Enter your email"
-                className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 flex-1 md:w-64"
-                data-testid="input-newsletter-email"
-                id="newsletter-email"
-              />
-              <motion.button 
-                className="px-6 py-2 bg-white text-emerald-900 rounded-lg font-semibold hover:bg-emerald-50 transition-colors"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                data-testid="button-newsletter-subscribe"
-                onClick={() => {
-                  const emailInput = document.getElementById('newsletter-email') as HTMLInputElement;
-                  if (emailInput && emailInput.value) {
-                    setSubscribed(true);
-                    emailInput.value = '';
-                  }
+            <div className="flex flex-col space-y-2 w-full md:w-auto">
+              <label htmlFor="newsletter-email" className="sr-only">
+                Email address for newsletter
+              </label>
+              <form
+                className="flex space-x-2 w-full md:w-auto"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSubscribe();
                 }}
               >
-                {subscribed ? "Subscribed!" : "Subscribe"}
-              </motion.button>
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 flex-1 md:w-64"
+                  data-testid="input-newsletter-email"
+                  id="newsletter-email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+                <motion.button
+                  type="submit"
+                  className="px-6 py-2 bg-white text-emerald-900 rounded-lg font-semibold hover:bg-emerald-50 transition-colors"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  data-testid="button-newsletter-subscribe"
+                >
+                  {subscribed ? "Subscribed!" : "Subscribe"}
+                </motion.button>
+              </form>
             </div>
           </div>
         </motion.div>

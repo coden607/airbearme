@@ -52,7 +52,7 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           {/* Logo with Spinning Wheel */}
-          <Link to="/">
+          <Link href="/" aria-label="AirBear Home">
             <motion.div 
               className="flex items-center space-x-3 group cursor-pointer"
               whileHover={{ scale: 1.05 }}
@@ -71,7 +71,7 @@ export default function Header() {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             {navigation.map((item) => (
-              <Link key={item.name} to={item.href}>
+              <Link key={item.name} href={item.href}>
                 <motion.div
                   className={`text-foreground/80 hover:text-primary transition-colors hover-lift flex items-center space-x-2 cursor-pointer ${
                     isActive(item.href) ? "text-primary font-semibold" : ""
@@ -124,19 +124,19 @@ export default function Header() {
                     </div>
                   </div>
                   <DropdownMenuSeparator />
-                  <Link to="/dashboard">
+                  <Link href="/dashboard">
                     <DropdownMenuItem className="cursor-pointer" data-testid="menu-dashboard">
                       <User className="mr-2 h-4 w-4" />
                       Dashboard
                     </DropdownMenuItem>
                   </Link>
-                  <Link to="/challenges">
+                  <Link href="/challenges">
                     <DropdownMenuItem className="cursor-pointer" data-testid="menu-challenges">
                       <Award className="mr-2 h-4 w-4" />
                       Eco Challenges
                     </DropdownMenuItem>
                   </Link>
-                  <Link to="/rewards">
+                  <Link href="/rewards">
                     <DropdownMenuItem className="cursor-pointer" data-testid="menu-rewards">
                       <Gift className="mr-2 h-4 w-4" />
                       Rewards
@@ -163,7 +163,7 @@ export default function Header() {
               </DropdownMenu>
             ) : (
               <div className="hidden md:flex items-center space-x-3">
-                <Link to="/auth">
+                <Link href="/auth">
                   <Button 
                     variant="ghost" 
                     className="text-primary border border-primary/30 hover:bg-primary/10 hover-lift ripple-effect"
@@ -172,7 +172,7 @@ export default function Header() {
                     Sign In
                   </Button>
                 </Link>
-                <Link to="/auth?mode=signup">
+                <Link href="/auth?mode=signup">
                   <Button 
                     className="eco-gradient text-white hover-lift animate-pulse-glow ripple-effect"
                     data-testid="button-get-started"
@@ -203,7 +203,7 @@ export default function Header() {
                     {navigation.map((item) => (
                       <Link
                         key={item.name}
-                        to={item.href}
+                        href={item.href}
                         className={`flex items-center space-x-3 text-foreground/80 hover:text-primary transition-colors p-2 rounded-lg hover:bg-muted active:scale-95 ${
                           isActive(item.href) ? "text-primary bg-primary/10 font-medium" : ""
                         }`}
@@ -229,7 +229,7 @@ export default function Header() {
                   {/* Mobile Auth */}
                   {!user && (
                     <div className="flex flex-col space-y-3 pt-6 border-t">
-                      <Link to="/auth">
+                      <Link href="/auth">
                         <Button 
                           variant="outline" 
                           className="w-full"
@@ -239,7 +239,7 @@ export default function Header() {
                           Sign In
                         </Button>
                       </Link>
-                      <Link to="/auth?mode=signup">
+                      <Link href="/auth?mode=signup">
                         <Button 
                           className="w-full eco-gradient text-white"
                           onClick={() => setMobileMenuOpen(false)}
@@ -267,7 +267,7 @@ export default function Header() {
                         </div>
                       </div>
 
-                      <Link to="/dashboard">
+                      <Link href="/dashboard">
                         <Button 
                           variant="ghost" 
                           className="w-full justify-start"
@@ -279,7 +279,7 @@ export default function Header() {
                         </Button>
                       </Link>
 
-                      <Link to="/challenges">
+                      <Link href="/challenges">
                         <Button 
                           variant="ghost" 
                           className="w-full justify-start"
@@ -291,7 +291,7 @@ export default function Header() {
                         </Button>
                       </Link>
 
-                      <Link to="/rewards">
+                      <Link href="/rewards">
                         <Button 
                           variant="ghost" 
                           className="w-full justify-start"
