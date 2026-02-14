@@ -470,6 +470,17 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
   });
 
+  // Available airbears route
+  app.get("/api/airbears/available", async (req, res) => {
+    try {
+      const airbears = await storage.getAvailableAirbears();
+      res.json(airbears);
+    } catch (error) {
+      logRouteError(req, error);
+      res.status(500).json({ message: "Failed to fetch available airbears" });
+    }
+  });
+
   // Bodega items route
   app.get("/api/bodega-items", async (req, res) => {
     try {
