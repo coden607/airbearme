@@ -10,9 +10,10 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { Moon, Sun, Menu, User, Settings, LogOut, Award, Gift, Map, Store, Trophy, Leaf } from "lucide-react";
+import { Moon, Sun, Menu, User, Settings, LogOut, Award, Gift, Map, Store, Trophy, Leaf, ChevronRight } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/hooks/use-auth";
+import { useUserJourney } from "@/hooks/use-user-journey";
 import { motion } from "framer-motion";
 import { AirBearMascot } from "@/components/airbear-mascot";
 
@@ -20,6 +21,7 @@ export default function Header() {
   const [location] = useLocation();
   const { theme, setTheme } = useTheme();
   const { user, logout } = useAuth();
+  const { cta, stage } = useUserJourney();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const baseNavigation = [
@@ -101,85 +103,167 @@ export default function Header() {
               <span className="sr-only">Toggle theme</span>
             </Button>
 
-            {/* User Authentication */}
+            {/* User Authentication & Smart CTA */}
             {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full hover-lift" data-testid="button-user-menu">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.avatarUrl || ""} alt={user.username || ""} />
-                      <AvatarFallback className="bg-primary text-primary-foreground">
-                        {user.username?.charAt(0).toUpperCase() || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56 glass-morphism" align="end" forceMount>
-                  <div className="flex items-center justify-start gap-2 p-2">
-                    <div className="flex flex-col space-y-1 leading-none">
-                      <p className="font-medium">{user.username}</p>
-                      <p className="w-[200px] truncate text-sm text-muted-foreground">
-                        {user.email}
-                      </p>
+              <div className="flex items-center space-x-3">
+                {/* Smart Journey CTA for logged-in users */}
+                {(stage === 'signed_in' || stage === 'active_ride' || stage === 'booking_ride') && (
+                  <Link href={cta.href}>
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Button
+                        className={`hidden md:flex relative overflow-hidden ${
+                          cta.pulse
+                            ? 'bg-gradient-to-r from-emerald-500 to-lime-500 hover:from-emerald-600 hover:to-lime-600 text-white'
+                            : 'bg-primary hover:bg-primary/90'
+                        }`}
+                        data-testid="button-journey-cta"
+                      >
+                        {cta.action}
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                        {cta.pulse && (
+                          <motion.span
+                            className="absolute inset-0 bg-white/20"
+                            animate={{ opacity: [0, 0.4, 0] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
+                          />
+                        )}
+                      </Button>
+                    </motion.div>
+                  </Link>
+                )}
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-8 w-8 rounded-full hover-lift" data-testid="button-user-menu">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={user.avatarUrl || ""} alt={user.username || ""} />
+                        <AvatarFallback className="bg-primary text-primary-foreground">
+                          {user.username?.charAt(0).toUpperCase() || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56 glass-morphism" align="end" forceMount>
+                    <div className="flex items-center justify-start gap-2 p-2">
+                      <div className="flex flex-col space-y-1 leading-none">
+                        <p className="font-medium">{user.username}</p>
+                        <p className="w-[200px] truncate text-sm text-muted-foreground">
+                          {user.email}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <DropdownMenuSeparator />
-                  <Link href="/dashboard">
-                    <DropdownMenuItem className="cursor-pointer" data-testid="menu-dashboard">
-                      <User className="mr-2 h-4 w-4" />
-                      Dashboard
+                    <DropdownMenuSeparator />
+                    <Link href="/dashboard">
+                      <DropdownMenuItem className="cursor-pointer" data-testid="menu-dashboard">
+                        <User className="mr-2 h-4 w-4" />
+                        Dashboard
+                      </DropdownMenuItem>
+                    </Link>
+                    <Link href="/challenges">
+                      <DropdownMenuItem className="cursor-pointer" data-testid="menu-challenges">
+                        <Award className="mr-2 h-4 w-4" />
+                        Eco Challenges
+                      </DropdownMenuItem>
+                    </Link>
+                    <Link href="/rewards">
+                      <DropdownMenuItem className="cursor-pointer" data-testid="menu-rewards">
+                        <Gift className="mr-2 h-4 w-4" />
+                        Rewards
+                      </DropdownMenuItem>
+                    </Link>
+                    <DropdownMenuItem
+                      className="cursor-default opacity-50"
+                      data-testid="menu-settings"
+                      disabled
+                    >
+                      <Settings className="mr-2 h-4 w-4" />
+                      Settings (Coming Soon)
                     </DropdownMenuItem>
-                  </Link>
-                  <Link href="/challenges">
-                    <DropdownMenuItem className="cursor-pointer" data-testid="menu-challenges">
-                      <Award className="mr-2 h-4 w-4" />
-                      Eco Challenges
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="cursor-pointer text-destructive focus:text-destructive"
+                      onClick={logout}
+                      data-testid="menu-logout"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Log out
                     </DropdownMenuItem>
-                  </Link>
-                  <Link href="/rewards">
-                    <DropdownMenuItem className="cursor-pointer" data-testid="menu-rewards">
-                      <Gift className="mr-2 h-4 w-4" />
-                      Rewards
-                    </DropdownMenuItem>
-                  </Link>
-                  <DropdownMenuItem
-                    className="cursor-default opacity-50"
-                    data-testid="menu-settings"
-                    disabled
-                  >
-                    <Settings className="mr-2 h-4 w-4" />
-                    Settings (Coming Soon)
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    className="cursor-pointer text-destructive focus:text-destructive" 
-                    onClick={logout}
-                    data-testid="menu-logout"
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Log out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             ) : (
               <div className="hidden md:flex items-center space-x-3">
-                <Link href="/auth">
-                  <Button 
-                    variant="ghost" 
-                    className="text-primary border border-primary/30 hover:bg-primary/10 hover-lift ripple-effect"
-                    data-testid="button-sign-in"
-                  >
-                    Sign In
-                  </Button>
-                </Link>
-                <Link href="/auth?mode=signup">
-                  <Button 
-                    className="eco-gradient text-white hover-lift animate-pulse-glow ripple-effect"
-                    data-testid="button-get-started"
-                  >
-                    Get Started
-                  </Button>
-                </Link>
+                {/* Smart CTA based on journey stage */}
+                {stage === 'returning_guest' ? (
+                  <>
+                    <Link href="/auth">
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Button
+                          className="relative overflow-hidden eco-gradient text-white hover-lift ripple-effect"
+                          data-testid="button-sign-in"
+                        >
+                          Welcome Back - Sign In
+                          <motion.span
+                            className="absolute inset-0 bg-white/20"
+                            animate={{ opacity: [0, 0.4, 0] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
+                          />
+                        </Button>
+                      </motion.div>
+                    </Link>
+                    <Link href="/auth?mode=signup">
+                      <Button
+                        variant="ghost"
+                        className="text-primary border border-primary/30 hover:bg-primary/10"
+                        data-testid="button-get-started"
+                      >
+                        New? Sign Up
+                      </Button>
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/auth">
+                      <Button
+                        variant="ghost"
+                        className="text-primary border border-primary/30 hover:bg-primary/10 hover-lift ripple-effect"
+                        data-testid="button-sign-in"
+                      >
+                        Sign In
+                      </Button>
+                    </Link>
+                    <Link href="/auth?mode=signup">
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Button
+                          className="relative overflow-hidden eco-gradient text-white hover-lift ripple-effect"
+                          data-testid="button-get-started"
+                        >
+                          Get Started Free
+                          <motion.span
+                            className="absolute inset-0 bg-white/20"
+                            animate={{ opacity: [0, 0.4, 0] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
+                          />
+                        </Button>
+                      </motion.div>
+                    </Link>
+                  </>
+                )}
               </div>
             )}
 
@@ -226,28 +310,64 @@ export default function Header() {
                     ))}
                   </nav>
 
-                  {/* Mobile Auth */}
+                  {/* Mobile Auth with Smart CTAs */}
                   {!user && (
                     <div className="flex flex-col space-y-3 pt-6 border-t">
-                      <Link href="/auth">
-                        <Button 
-                          variant="outline" 
-                          className="w-full"
-                          onClick={() => setMobileMenuOpen(false)}
-                          data-testid="mobile-button-sign-in"
-                        >
-                          Sign In
-                        </Button>
-                      </Link>
-                      <Link href="/auth?mode=signup">
-                        <Button 
-                          className="w-full eco-gradient text-white"
-                          onClick={() => setMobileMenuOpen(false)}
-                          data-testid="mobile-button-get-started"
-                        >
-                          Get Started
-                        </Button>
-                      </Link>
+                      {stage === 'returning_guest' ? (
+                        <>
+                          <Link href="/auth">
+                            <Button
+                              className="w-full relative overflow-hidden eco-gradient text-white"
+                              onClick={() => setMobileMenuOpen(false)}
+                              data-testid="mobile-button-sign-in"
+                            >
+                              Welcome Back - Sign In
+                              <motion.span
+                                className="absolute inset-0 bg-white/20"
+                                animate={{ opacity: [0, 0.4, 0] }}
+                                transition={{ duration: 1.5, repeat: Infinity }}
+                              />
+                            </Button>
+                          </Link>
+                          <Link href="/auth?mode=signup">
+                            <Button
+                              variant="outline"
+                              className="w-full"
+                              onClick={() => setMobileMenuOpen(false)}
+                              data-testid="mobile-button-get-started"
+                            >
+                              New Here? Sign Up
+                            </Button>
+                          </Link>
+                        </>
+                      ) : (
+                        <>
+                          <Link href="/auth?mode=signup">
+                            <Button
+                              className="w-full relative overflow-hidden eco-gradient text-white"
+                              onClick={() => setMobileMenuOpen(false)}
+                              data-testid="mobile-button-get-started"
+                            >
+                              Get Started Free
+                              <motion.span
+                                className="absolute inset-0 bg-white/20"
+                                animate={{ opacity: [0, 0.4, 0] }}
+                                transition={{ duration: 1.5, repeat: Infinity }}
+                              />
+                            </Button>
+                          </Link>
+                          <Link href="/auth">
+                            <Button
+                              variant="outline"
+                              className="w-full"
+                              onClick={() => setMobileMenuOpen(false)}
+                              data-testid="mobile-button-sign-in"
+                            >
+                              Sign In
+                            </Button>
+                          </Link>
+                        </>
+                      )}
                     </div>
                   )}
 

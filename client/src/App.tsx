@@ -34,6 +34,7 @@ import ErrorBoundary from "@/components/error-boundary";
 import AirbearWheel from "@/components/airbear-wheel";
 import PWAInstallPrompt from "@/components/pwa-install-prompt";
 import { AirBearMascot } from "@/components/airbear-mascot";
+import { FloatingJourneyCTA } from "@/components/journey-cta";
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, isInitialized } = useAuth();
@@ -108,6 +109,9 @@ function Router() {
       <div className="fixed bottom-4 right-4 z-40 pointer-events-none opacity-80 hover:opacity-100 transition-opacity duration-300">
         <AirBearMascot size="2xl" />
       </div>
+
+      {/* Smart Journey CTA */}
+      <FloatingJourneyCTA />
 
       {/* PWA Install Prompt */}
       <PWAInstallPrompt />

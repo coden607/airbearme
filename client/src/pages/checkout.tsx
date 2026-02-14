@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, authFetch } from "@/lib/queryClient";
 import AirbearWheel from "@/components/airbear-wheel";
 import LoadingSpinner from "@/components/loading-spinner";
+import { CheckoutUpsell } from "@/components/journey-cta";
 import {
   CreditCard,
   Smartphone,
@@ -405,6 +406,9 @@ export default function Checkout() {
               : 'Complete your order for pickup during your next ride'}
           </p>
         </motion.div>
+
+        {/* Upsell Prompt */}
+        <CheckoutUpsell />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Order Summary */}

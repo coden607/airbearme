@@ -15,6 +15,7 @@ import { MASCOT_DATA_URL } from "@/lib/mascot-data";
 import { MapPin, Battery, Navigation, Car, Clock, Phone } from "lucide-react";
 import { useAirbearLocationUpdates } from "@/hooks/use-driver-location";
 import { useAuth } from "@/hooks/use-auth";
+import { RideUpsellBanner } from "@/components/journey-cta";
 
 interface ActiveRide {
   id: string;
@@ -686,6 +687,9 @@ export default function Map() {
             </div>
           </motion.div>
         )}
+
+        {/* Bodega Upsell for Active Rides */}
+        {activeRide && <RideUpsellBanner />}
 
         {/* Status Bar */}
         <div className="mb-6 p-4 bg-card rounded-xl border flex flex-wrap items-center justify-between gap-4">
