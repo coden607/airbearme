@@ -107,6 +107,11 @@ interface AirbearApiResponse {
   isCharging?: boolean;
   is_charging?: boolean;
   ischarging?: boolean;
+  driverId?: string;
+  driver_id?: string;
+  capacity?: number;
+  currentRiders?: number;
+  current_riders?: number;
 }
 
 interface RideApiResponse {
@@ -135,9 +140,21 @@ interface Airbear {
   batteryLevel: number;
   isAvailable: boolean;
   isCharging: boolean;
+  capacity?: number;
+  currentRiders?: number;
+  driverId?: string;
 }
 
-const isAirbearAvailable = (a: Airbear) => a.isAvailable && !a.isCharging && a.batteryLevel > 20;
+const FARE_PER_RIDER = 4.00; // $4 per passenger
+const MAX_CAPACITY = 5; // 5 spots per airbear
+
+// Airbear is available only if: has a driver, not charging, enough battery, and has available seats
+const isAirbearAvailable = (a: Airbear, requestedSeats: number = 1) => {
+  const capacity = a.capacity ?? MAX_CAPACITY;
+  const currentRiders = a.currentRiders ?? 0;
+  const availableSeats = capacity - currentRiders;
+  return a.isAvailable && !a.isCharging && a.batteryLevel > 20 && a.driverId && availableSeats >= requestedSeats;
+};
 
 export default function Map() {
   const { user } = useAuth();
@@ -151,6 +168,7 @@ export default function Map() {
   const [showBookingDialog, setShowBookingDialog] = useState(false);
   const [mapReady, setMapReady] = useState(false);
   const [activeRideId, setActiveRideId] = useState<string | null>(null);
+  const [passengers, setPassengers] = useState(1); // Number of riders (1-5)
 
   // Check URL for active ride tracking
   useEffect(() => {
@@ -234,6 +252,9 @@ export default function Map() {
           batteryLevel: Number(item.batteryLevel ?? item.battery_level ?? item.batterylevel ?? 100),
           isAvailable: item.isAvailable ?? item.is_available ?? item.isavailable ?? false,
           isCharging: item.isCharging ?? item.is_charging ?? item.ischarging ?? false,
+          driverId: item.driverId ?? item.driver_id ?? undefined,
+          capacity: item.capacity ?? MAX_CAPACITY,
+          currentRiders: item.currentRiders ?? item.current_riders ?? 0,
         }));
       } catch {
         return [];
@@ -256,6 +277,9 @@ export default function Map() {
         batteryLevel: Number(item.batteryLevel ?? item.battery_level ?? 100),
         isAvailable: item.isAvailable ?? item.is_available ?? false,
         isCharging: item.isCharging ?? item.is_charging ?? false,
+        driverId: item.driverId ?? item.driver_id ?? undefined,
+        capacity: item.capacity ?? MAX_CAPACITY,
+        currentRiders: item.currentRiders ?? item.current_riders ?? 0,
       }));
     }
     return airbearsData;
@@ -521,12 +545,10 @@ export default function Map() {
     return { time: timeMinutes, distance: Math.round(dist * 10) / 10 };
   };
 
-  const calculateFare = (pickupLat: number, pickupLng: number, dropoffLat: number, dropoffLng: number): string => {
-    const distance = calculateDistance(pickupLat, pickupLng, dropoffLat, dropoffLng);
-    const baseFare = 2.50;
-    const perMileRate = 1.50;
-    const fare = Math.max(4.00, baseFare + distance * perMileRate);
-    return (Math.round(fare * 100) / 100).toFixed(2);
+  // Fare is $4 per rider
+  const calculateFare = (numPassengers: number): string => {
+    const fare = numPassengers * FARE_PER_RIDER;
+    return fare.toFixed(2);
   };
 
   const handleBookRide = async () => {
@@ -542,10 +564,19 @@ export default function Map() {
       return;
     }
 
-    // Find any available airbear (not just at this spot)
-    const availableAirbears = airbears.filter(isAirbearAvailable);
+    // Find available airbears with enough capacity for requested passengers
+    const availableAirbears = airbears.filter(a => isAirbearAvailable(a, passengers));
 
-    // Pick the closest available airbear, or any if none at spot
+    if (availableAirbears.length === 0) {
+      toast({
+        title: "No Available AirBears",
+        description: `No AirBears available with ${passengers} seat${passengers > 1 ? 's' : ''}. Please try fewer passengers or wait.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Pick the closest available airbear
     let selectedAirbear = availableAirbears.find(a => a.currentSpotId === selectedSpot.id);
     if (!selectedAirbear && availableAirbears.length > 0) {
       let minDist = Infinity;
@@ -561,10 +592,8 @@ export default function Map() {
       }
     }
 
-    const fare = calculateFare(
-      Number(selectedSpot.latitude), Number(selectedSpot.longitude),
-      Number(selectedDestination.latitude), Number(selectedDestination.longitude)
-    );
+    // Fare is $4 per passenger
+    const fare = calculateFare(passengers);
 
     try {
       const response = await apiRequest('POST', '/api/rides', {
@@ -572,6 +601,7 @@ export default function Map() {
         pickupSpotId: selectedSpot.id,
         dropoffSpotId: selectedDestination.id,
         airbearId: selectedAirbear?.id || null,
+        passengers,
         fare,
         status: 'pending'
       });
@@ -580,16 +610,15 @@ export default function Map() {
       const estimate = getPickupEstimate();
       toast({
         title: "Ride Booked!",
-        description: selectedAirbear
-          ? `AirBear arriving in ~${estimate.time} min!`
-          : `Finding nearest driver... ~${estimate.time} min ETA`
+        description: `${passengers} rider${passengers > 1 ? 's' : ''} - AirBear arriving in ~${estimate.time} min!`
       });
       setShowBookingDialog(false);
       setSelectedSpot(null);
       setSelectedDestination(null);
+      setPassengers(1); // Reset passengers
 
       if (rideData.id) {
-        window.location.href = `/checkout?rideId=${rideData.id}&amount=${fare}`;
+        window.location.href = `/checkout?rideId=${rideData.id}&amount=${fare}&passengers=${passengers}`;
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -746,7 +775,10 @@ export default function Map() {
         </div>
 
         {/* Booking Dialog */}
-        <Dialog open={showBookingDialog} onOpenChange={setShowBookingDialog}>
+        <Dialog open={showBookingDialog} onOpenChange={(open) => {
+          setShowBookingDialog(open);
+          if (!open) setPassengers(1); // Reset passengers when closing
+        }}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -784,6 +816,29 @@ export default function Map() {
                 </select>
               </div>
 
+              {/* Passenger Selector */}
+              <div>
+                <label className="text-sm font-medium">Number of Riders</label>
+                <div className="mt-2 flex items-center gap-2">
+                  {[1, 2, 3, 4, 5].map((num) => (
+                    <button
+                      key={num}
+                      onClick={() => setPassengers(num)}
+                      className={`flex-1 py-3 rounded-lg border-2 font-bold transition-all ${
+                        passengers === num
+                          ? 'bg-emerald-500 text-white border-emerald-500'
+                          : 'bg-background border-gray-200 hover:border-emerald-300'
+                      }`}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground text-center">
+                  ${FARE_PER_RIDER.toFixed(2)} per rider • Max 5 per AirBear
+                </p>
+              </div>
+
               {selectedSpot && selectedDestination && (
                 <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
                   <div className="grid grid-cols-2 gap-4 text-sm">
@@ -800,23 +855,25 @@ export default function Map() {
                       <div className="font-bold text-blue-600">~{getRideEstimate().time} min</div>
                     </div>
                     <div>
-                      <div className="text-xs text-muted-foreground">Available Drivers</div>
-                      <div className="font-bold text-emerald-600">{availableAirbearsCount}</div>
+                      <div className="text-xs text-muted-foreground">Available AirBears</div>
+                      <div className="font-bold text-emerald-600">
+                        {airbears.filter(a => isAirbearAvailable(a, passengers)).length}
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
 
               <div className="p-4 bg-muted rounded-lg">
-                <div className="flex justify-between mb-2">
-                  <span>Estimated Fare</span>
-                  <span className="font-bold text-emerald-600">
-                    ${selectedSpot && selectedDestination
-                      ? calculateFare(
-                          Number(selectedSpot.latitude), Number(selectedSpot.longitude),
-                          Number(selectedDestination.latitude), Number(selectedDestination.longitude)
-                        )
-                      : '4.00'}
+                <div className="flex justify-between items-center mb-2">
+                  <div>
+                    <span className="font-medium">Total Fare</span>
+                    <div className="text-xs text-muted-foreground">
+                      {passengers} rider{passengers > 1 ? 's' : ''} × ${FARE_PER_RIDER.toFixed(2)}
+                    </div>
+                  </div>
+                  <span className="text-2xl font-bold text-emerald-600">
+                    ${calculateFare(passengers)}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -827,9 +884,11 @@ export default function Map() {
               <Button
                 className="w-full bg-emerald-500 hover:bg-emerald-600"
                 onClick={handleBookRide}
-                disabled={!selectedSpot || !selectedDestination || availableAirbearsCount === 0}
+                disabled={!selectedSpot || !selectedDestination || airbears.filter(a => isAirbearAvailable(a, passengers)).length === 0}
               >
-                {availableAirbearsCount === 0 ? 'No Drivers Available' : 'Confirm Booking'}
+                {airbears.filter(a => isAirbearAvailable(a, passengers)).length === 0
+                  ? `No AirBears with ${passengers} seat${passengers > 1 ? 's' : ''}`
+                  : `Book ${passengers} Rider${passengers > 1 ? 's' : ''} - $${calculateFare(passengers)}`}
               </Button>
             </div>
           </DialogContent>

@@ -80,6 +80,7 @@ const normalizeRideRow = (row: Record<string, unknown>): Ride => ({
   pickupSpotId: getField<string>(row, 'pickupSpotId', 'pickup_spot_id', 'pickupspotid') ?? '',
   dropoffSpotId: getField<string>(row, 'dropoffSpotId', 'dropoff_spot_id', 'dropoffspotid') ?? '',
   status: (row.status as Ride['status']) ?? 'pending',
+  passengers: getField<number>(row, 'passengers') ?? 1,
   fare: (row.fare as string) ?? '0',
   distance: (row.distance as string) ?? null,
   estimatedDuration: getField<number>(row, 'estimatedDuration', 'estimated_duration', 'estimatedduration') ?? null,
@@ -102,6 +103,7 @@ const toSnakeRidePayload = (ride: Partial<Ride>) =>
     airbearid: ride.airbearId,
     pickupspotid: ride.pickupSpotId,
     dropoffspotid: ride.dropoffSpotId,
+    passengers: ride.passengers,
     estimatedduration: ride.estimatedDuration,
     actualduration: ride.actualDuration,
     co2saved: ride.co2Saved,
@@ -126,6 +128,8 @@ const toSnakeAirbearPayload = (updates: Partial<Airbear>) => stripUndefined({
   is_charging: (updates as any).isCharging,
   total_distance: (updates as any).totalDistance,
   maintenance_status: (updates as any).maintenanceStatus,
+  capacity: (updates as any).capacity,
+  current_riders: (updates as any).currentRiders,
 });
 
 const toSnakeOrderPayload = (order: Partial<InsertOrder | Order>) => stripUndefined({

@@ -51,6 +51,8 @@ export const airbears = pgTable("airbears", {
   isCharging: boolean("is_charging").notNull().default(false),
   totalDistance: decimal("total_distance", { precision: 10, scale: 2 }).notNull().default("0"),
   maintenanceStatus: text("maintenance_status").notNull().default("good"),
+  capacity: integer("capacity").notNull().default(5), // Max 5 riders per airbear
+  currentRiders: integer("current_riders").notNull().default(0), // Current passengers
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`)
 });
@@ -62,13 +64,14 @@ export const rides = pgTable("rides", {
   driverId: varchar("driver_id").references(() => users.id),
   airbearId: varchar("airbear_id").references(() => airbears.id),
   pickupSpotId: varchar("pickup_spot_id").notNull().references(() => spots.id),
-  dropoffSpotId: varchar("dropoff_spot_id").notNull().references(() => spots.id), // Renamed for consistency
+  dropoffSpotId: varchar("dropoff_spot_id").notNull().references(() => spots.id),
   status: rideStatusEnum("status").notNull().default("pending"),
+  passengers: integer("passengers").notNull().default(1), // Number of riders ($4 each)
   estimatedDuration: integer("estimated_duration"), // minutes
   actualDuration: integer("actual_duration"), // minutes
   distance: decimal("distance", { precision: 8, scale: 2 }), // km
   co2Saved: decimal("co2_saved", { precision: 8, scale: 2 }), // kg
-  fare: decimal("fare", { precision: 8, scale: 2 }).notNull(),
+  fare: decimal("fare", { precision: 8, scale: 2 }).notNull(), // $4 per passenger
   isFreeTshirtRide: boolean("is_free_tshirt_ride").notNull().default(false),
   requestedAt: timestamp("requested_at").notNull().default(sql`now()`),
   acceptedAt: timestamp("accepted_at"),

@@ -131,6 +131,7 @@ export default function Checkout() {
     const rideId = urlParams.get('rideId');
     const amount = parseFloat(urlParams.get('amount') || '0');
     const orderId = urlParams.get('orderId');
+    const passengers = parseInt(urlParams.get('passengers') || '1', 10);
 
     if (rideId && amount > 0) {
       // Coming from ride booking
@@ -138,7 +139,7 @@ export default function Checkout() {
       setOrderData({
         orderId: orderId || `order_${Date.now()}`,
         rideId: rideId,
-        items: [{ name: "AirBear Ride - Binghamton", price: amount, quantity: 1 }],
+        items: [{ name: `AirBear Ride - ${passengers} rider${passengers > 1 ? 's' : ''} @ $4.00 each`, price: amount, quantity: 1 }],
         subtotal: amount,
         tax: Math.round(tax * 100) / 100,
         total: Math.round((amount + tax) * 100) / 100,
