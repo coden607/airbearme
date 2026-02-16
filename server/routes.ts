@@ -63,6 +63,8 @@ export async function registerRoutes(app: Express): Promise<Express> {
     res.json({
       status: "ok",
       timestamp: new Date().toISOString(),
+      deployment: "a0bf1e3",
+      authDisabled: true
     });
   });
 
