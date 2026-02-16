@@ -765,62 +765,96 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Stripe payment routes
-  app.post("/api/create-payment-intent", requireAuth, async (req, res) => {
+  app.post("/api/create-payment-intent", async (req, res) => {
     try {
+      console.log(`[Payment] Payment intent request received: ${JSON.stringify(req.body)}`);
+      
+      // Apply authentication manually for better error handling
+      const authResult = await new Promise<{ success: boolean; userId?: string; userRole?: string; error?: string }>((resolve) => {
+        requireAuth(req, res, () => {
+          const userId = getAuthUserId(req);
+          const userRole = getAuthUserRole(req);
+          resolve({ success: true, userId, userRole });
+        }).catch((error) => {
+          resolve({ success: false, error: error.message });
+        });
+      });
+
+      if (!authResult.success || !authResult.userId) {
+        console.log(`[Payment] Authentication failed: ${authResult.error}`);
+        return res.status(401).json({ 
+          message: "Authentication required. Please log in and try again.",
+          code: "AUTH_REQUIRED",
+          details: authResult.error 
+        });
+      }
+
       const { amount, orderId, rideId, userId, paymentMethod = "stripe" } = req.body;
 
-      // Ownership check: userId must match the authenticated user
-      const authUserId = getAuthUserId(req);
-      if (userId && userId !== authUserId) {
-        return res.status(403).json({ message: "Forbidden: cannot create payment for another user" });
-      }
-
+      // Validate required fields
       if (!amount || amount <= 0) {
-        return res.status(400).json({ message: "Invalid amount" });
+        return res.status(400).json({ message: "Invalid amount specified" });
       }
 
-      if (paymentMethod === "cash") {
-        // For cash payments, generate QR code data with HMAC signature
-        const qrData = {
-          orderId,
-          rideId,
-          userId,
-          amount,
-          timestamp: Date.now(),
-          method: "cash"
-        };
+      // Use authenticated user ID if not provided in request
+      const finalUserId = userId || authResult.userId;
 
-        const signature = await hmacSha256(qrSecret, JSON.stringify(qrData));
+      console.log(`[Payment] Creating payment intent for user ${finalUserId}, amount: $${amount}, orderId: ${orderId}, rideId: ${rideId}`);
 
-        return res.json({
-          qrCode: Buffer.from(JSON.stringify(qrData)).toString('base64'),
-          signature,
-          paymentMethod: "cash"
-        });
+      // Verify order/ride ownership if provided
+      if (orderId) {
+        const order = await storage.getOrder(orderId);
+        if (!order) {
+          return res.status(404).json({ message: "Order not found" });
+        }
+        if (order.userId !== finalUserId) {
+          return res.status(403).json({ message: "Order does not belong to this user" });
+        }
       }
 
-      // Check if Stripe is configured
+      if (rideId) {
+        const ride = await storage.getRide(rideId);
+        if (!ride) {
+          return res.status(404).json({ message: "Ride not found" });
+        }
+        if (ride.userId !== finalUserId) {
+          return res.status(403).json({ message: "Ride does not belong to this user" });
+        }
+      }
+
+      // Ensure Stripe is configured
+      const stripe = getStripe();
       if (!stripe) {
-        console.log('Stripe not configured - payments unavailable');
-        return res.status(503).json({
-          error: "Payments not configured",
-          message: "Payment processing is not available. Please contact support."
+        console.error('[Payment] Stripe not configured');
+        return res.status(500).json({ 
+          message: "Payment service is not available. Please try again later.",
+          code: "STRIPE_NOT_CONFIGURED"
         });
       }
 
-      // Create Stripe PaymentIntent
+      // Create Stripe PaymentIntent with enhanced metadata
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(amount * 100), // Convert to cents
         currency: "usd",
         automatic_payment_methods: {
-          enabled: true
+          enabled: true,
         },
         metadata: {
-          orderId: orderId || null,
-          rideId: rideId || null,
-          userId: userId || null
-        }
+          userId: finalUserId,
+          orderId: orderId || '',
+          rideId: rideId || '',
+          paymentMethod,
+          userAgent: req.get('User-Agent') || '',
+          timestamp: new Date().toISOString()
+        },
+        description: orderId 
+          ? `Payment for order ${orderId}` 
+          : rideId 
+            ? `Payment for ride ${rideId}` 
+            : 'AirBear payment'
       });
+
+      console.log(`[Payment] PaymentIntent created successfully: ${paymentIntent.id}`);
 
       res.json({
         clientSecret: paymentIntent.client_secret,
@@ -831,8 +865,45 @@ export async function registerRoutes(app: Express): Promise<Express> {
       });
     } catch (error: any) {
       logRouteError(req, error);
-      console.error('Payment intent creation error:', error);
-      res.status(500).json({ message: error.message });
+      console.error('[Payment] Payment intent creation error:', error);
+      
+      // Handle specific Stripe errors with better messaging
+      if (error.type === 'StripeCardError') {
+        return res.status(400).json({ 
+          message: `Card error: ${error.message}`,
+          code: "CARD_ERROR"
+        });
+      } else if (error.type === 'StripeRateLimitError') {
+        return res.status(429).json({ 
+          message: "Too many requests. Please try again later.",
+          code: "RATE_LIMIT"
+        });
+      } else if (error.type === 'StripeInvalidRequestError') {
+        return res.status(400).json({ 
+          message: `Invalid request: ${error.message}`,
+          code: "INVALID_REQUEST"
+        });
+      } else if (error.type === 'StripeAPIError') {
+        return res.status(500).json({ 
+          message: "Payment service temporarily unavailable. Please try again.",
+          code: "API_ERROR"
+        });
+      } else if (error.code === 'authentication_required') {
+        return res.status(401).json({ 
+          message: "Additional authentication required. Please check your payment method.",
+          code: "PAYMENT_AUTH_REQUIRED"
+        });
+      } else if (error.message?.includes('authentication')) {
+        return res.status(401).json({ 
+          message: "Authentication required. Please log in and try again.",
+          code: "AUTH_REQUIRED"
+        });
+      }
+      
+      res.status(500).json({ 
+        message: error.message || "Payment setup failed. Please try again.",
+        code: "UNKNOWN_ERROR"
+      });
     }
   });
 
@@ -1031,37 +1102,54 @@ export async function registerRoutes(app: Express): Promise<Express> {
       logRouteError(req, error);
       res.status(500).json({ message: error.message });
     }
-  });
 
   // Webhook for Stripe
   app.post("/api/webhooks/stripe", async (req, res) => {
     try {
+      console.log('[Webhook] Stripe webhook received');
+      
       // Check if Stripe is configured
       if (!stripe) {
-        console.log('Stripe webhook received but Stripe not configured - ignoring');
+        console.log('[Webhook] Stripe webhook received but Stripe not configured - ignoring');
         return res.json({ received: true, demo: true });
       }
 
       const sig = req.headers['stripe-signature'];
       const endpointSecret = env.STRIPE_WEBHOOK_SECRET;
 
+      console.log(`[Webhook] Checking signature: ${sig ? 'present' : 'missing'}, secret: ${endpointSecret ? 'configured' : 'missing'}`);
+
       if (!sig || !endpointSecret) {
-        return res.status(400).json({ message: "Missing signature or webhook secret" });
+        console.error('[Webhook] Missing signature or webhook secret');
+        return res.status(400).json({ 
+          message: "Missing signature or webhook secret",
+          code: "WEBHOOK_CONFIG_ERROR"
+        });
       }
 
       let event;
       try {
-        event = stripe.webhooks.constructEvent((req as any).rawBody, sig, endpointSecret);
+        // Ensure rawBody is available for webhook verification
+        const rawBody = (req as any).rawBody || req.body;
+        if (!rawBody || typeof rawBody !== 'string') {
+          throw new Error('Raw request body not available for webhook verification');
+        }
+        
+        event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
+        console.log(`[Webhook] Event verified: ${event.type}`);
       } catch (err: any) {
-        console.error(`Webhook signature verification failed: ${err.message}`);
-        return res.status(400).json({ message: `Webhook signature verification failed: ${err.message}` });
+        console.error(`[Webhook] Signature verification failed: ${err.message}`);
+        return res.status(400).json({ 
+          message: `Webhook signature verification failed: ${err.message}`,
+          code: "WEBHOOK_SIGNATURE_INVALID"
+        });
       }
 
       // Handle the event
       switch (event.type) {
         case 'payment_intent.succeeded':
           const paymentIntent = event.data.object;
-          console.log('PaymentIntent succeeded:', paymentIntent.id);
+          console.log('[Webhook] PaymentIntent succeeded:', paymentIntent.id);
 
           // Handle CEO T-shirt purchase
           if (paymentIntent.metadata?.product_type === 'ceo_tshirt') {
@@ -1069,9 +1157,9 @@ export async function registerRoutes(app: Express): Promise<Express> {
             if (userId) {
               await storage.updateUser(userId, {
                 hasCeoTshirt: true,
-                tshirtPurchaseDate: new Date()
+                tshirtPurchaseDate: new Date(),
               });
-              console.log('CEO T-shirt activated for user:', userId);
+              console.log(`[Webhook] CEO T-shirt purchase completed for user ${userId}`);
             }
           }
 
@@ -1080,27 +1168,67 @@ export async function registerRoutes(app: Express): Promise<Express> {
           if (metadata?.orderId || metadata?.rideId) {
             // Update order/ride status to completed
             if (metadata.orderId) {
-              await storage.updateOrder(metadata.orderId, { status: "completed" });
+              await storage.updateOrder(metadata.orderId, { status: 'completed' });
+              console.log(`[Webhook] Order ${metadata.orderId} marked as completed`);
             }
             if (metadata.rideId) {
-              await storage.updateRide(metadata.rideId, { status: "completed" });
+              await storage.updateRide(metadata.rideId, { status: 'completed' });
+              console.log(`[Webhook] Ride ${metadata.rideId} marked as completed`);
             }
+
+            // Create payment record
+            await storage.createPayment({
+              userId: metadata.userId,
+              orderId: metadata.orderId || null,
+              rideId: metadata.rideId || null,
+              stripePaymentIntentId: paymentIntent.id,
+              amount: (paymentIntent.amount / 100).toString(), // Convert from cents
+              currency: paymentIntent.currency,
+              paymentMethod: metadata.paymentMethod || 'stripe',
+              status: 'succeeded',
+              metadata: metadata
+            });
+            console.log(`[Webhook] Payment record created for ${paymentIntent.id}`);
           }
           break;
 
         case 'payment_intent.payment_failed':
           const failedPayment = event.data.object;
-          console.log('PaymentIntent failed:', failedPayment.id);
+          console.log('[Webhook] PaymentIntent failed:', failedPayment.id);
+          
+          // Update payment status to failed
+          const failedMetadata = failedPayment.metadata;
+          if (failedMetadata?.orderId || failedMetadata?.rideId) {
+            await storage.createPayment({
+              userId: failedMetadata.userId,
+              orderId: failedMetadata.orderId || null,
+              rideId: failedMetadata.rideId || null,
+              stripePaymentIntentId: failedPayment.id,
+              amount: (failedPayment.amount / 100).toString(),
+              currency: failedPayment.currency,
+              paymentMethod: failedMetadata.paymentMethod || 'stripe',
+              status: 'failed',
+              metadata: failedMetadata
+            });
+          }
+          break;
+
+        case 'payment_intent.canceled':
+          console.log('[Webhook] PaymentIntent canceled:', event.data.object.id);
           break;
 
         default:
-          console.log(`Unhandled event type ${event.type}`);
+          console.log(`[Webhook] Unhandled event type: ${event.type}`);
       }
 
-      res.json({ received: true });
+      // Return a 200 response to acknowledge receipt of the event
+      res.json({ received: true, processed: true });
     } catch (error: any) {
-      logRouteError(req, error);
-      res.status(500).json({ message: error.message });
+      console.error('[Webhook] Error processing webhook:', error);
+      res.status(500).json({ 
+        message: 'Webhook processing failed',
+        error: error.message 
+      });
     }
   });
 

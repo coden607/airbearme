@@ -161,27 +161,8 @@ ALTER TABLE rides ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 
--- Create permissive policies for development (ADJUST FOR PRODUCTION!)
--- Users can read all data
-CREATE POLICY "Allow public read access on spots" ON spots FOR SELECT USING (true);
-CREATE POLICY "Allow public read access on airbears" ON airbears FOR SELECT USING (true);
-CREATE POLICY "Allow public read access on bodega_items" ON bodega_items FOR SELECT USING (true);
-
--- Users can manage their own data
-CREATE POLICY "Users can insert their own profile" ON users FOR INSERT WITH CHECK (true);
-CREATE POLICY "Users can update their own profile" ON users FOR UPDATE USING (true);
-CREATE POLICY "Users can read all profiles" ON users FOR SELECT USING (true);
-
--- Users can create rides and orders
-CREATE POLICY "Authenticated users can create rides" ON rides FOR INSERT WITH CHECK (true);
-CREATE POLICY "Authenticated users can read rides" ON rides FOR SELECT USING (true);
-CREATE POLICY "Authenticated users can update rides" ON rides FOR UPDATE USING (true);
-
-CREATE POLICY "Authenticated users can create orders" ON orders FOR INSERT WITH CHECK (true);
-CREATE POLICY "Authenticated users can read orders" ON orders FOR SELECT USING (true);
-
-CREATE POLICY "Authenticated users can create payments" ON payments FOR INSERT WITH CHECK (true);
-CREATE POLICY "Authenticated users can read payments" ON payments FOR SELECT USING (true);
+-- RLS policies already exist from previous run - skip creation
+-- If you need to recreate them, DROP the existing policies first
 
 -- ================================================
 -- SUCCESS!

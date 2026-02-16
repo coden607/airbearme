@@ -565,6 +565,16 @@ export default function Map() {
       return;
     }
 
+    // Prevent drivers from booking rides as passengers
+    if (user.role === 'driver') {
+      toast({ 
+        title: "Driver Account", 
+        description: "Drivers cannot book rides as passengers. Please switch to your user account or use the driver dashboard.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
     // Find available airbears with enough capacity for requested passengers
     const availableAirbears = airbears.filter(a => isAirbearAvailable(a, passengers));
 
@@ -597,6 +607,7 @@ export default function Map() {
     const fare = calculateFare(passengers);
 
     try {
+      // First, create the ride with "awaiting_payment" status - payment will confirm it
       const response = await apiRequest('POST', '/api/rides', {
         userId: user.id,
         pickupSpotId: selectedSpot.id,
@@ -604,7 +615,7 @@ export default function Map() {
         airbearId: selectedAirbear?.id || null,
         passengers,
         fare,
-        status: 'pending'
+        status: 'awaiting_payment'
       });
 
       const rideData = await response.json();
@@ -619,7 +630,8 @@ export default function Map() {
       setPassengers(1); // Reset passengers
 
       if (rideData.id) {
-        window.location.href = `/checkout?rideId=${rideData.id}&amount=${fare}&passengers=${passengers}`;
+// Redirect to checkout to complete payment
+        window.location.href = `/checkout?rideId=${rideData.id}&amount=${fare}`;
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -888,11 +900,14 @@ export default function Map() {
               <Button
                 className="w-full bg-emerald-500 hover:bg-emerald-600"
                 onClick={handleBookRide}
-                disabled={!selectedSpot || !selectedDestination || airbears.filter(a => isAirbearAvailable(a, passengers)).length === 0}
+                disabled={!selectedSpot || !selectedDestination || availableAirbearsCount === 0 || user?.role === 'driver'}
               >
-                {airbears.filter(a => isAirbearAvailable(a, passengers)).length === 0
-                  ? `No AirBears with ${passengers} seat${passengers > 1 ? 's' : ''}`
-                  : `Book ${passengers} Rider${passengers > 1 ? 's' : ''} - $${calculateFare(passengers)}`}
+                {user?.role === 'driver' 
+                  ? 'Use Driver Dashboard' 
+                  : availableAirbearsCount === 0 
+                    ? 'No Drivers Available' 
+                    : 'Confirm Booking'
+                }
               </Button>
             </div>
           </DialogContent>

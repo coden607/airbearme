@@ -15,6 +15,7 @@ interface NotificationPreferences {
   rideUpdates: boolean;
   promotions: boolean;
   maintenanceAlerts: boolean;
+  noDriversAvailable: boolean;
 }
 
 export const usePushNotifications = () => {
@@ -31,7 +32,8 @@ export const usePushNotifications = () => {
     driverAvailability: true,
     rideUpdates: true,
     promotions: false,
-    maintenanceAlerts: false
+    maintenanceAlerts: false,
+    noDriversAvailable: true
   });
 
   // Check if push notifications are supported and get current state
@@ -286,6 +288,28 @@ export const usePushNotifications = () => {
     }
   }, [state.isSubscribed, toast]);
 
+  // Send driver availability notification to users
+  const notifyDriverAvailability = useCallback(async (available: boolean): Promise<void> => {
+    if (!state.isSubscribed || !preferences.noDriversAvailable) return;
+
+    try {
+      await authFetch('/api/notifications/driver-availability', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          available,
+          message: available 
+            ? '🚗 Drivers are now available! Book your ride now.'
+            : '😔 No drivers available at the moment. We\'ll notify you when one returns.'
+        }),
+      });
+    } catch (error) {
+      console.error('Error sending driver availability notification:', error);
+    }
+  }, [state.isSubscribed, preferences.noDriversAvailable]);
+
   return {
     ...state,
     preferences,
@@ -293,7 +317,8 @@ export const usePushNotifications = () => {
     subscribe,
     unsubscribe,
     updatePreferences,
-    testNotification
+    testNotification,
+    notifyDriverAvailability
   };
 };
 

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
 import { useDriverLocation } from '@/hooks/use-driver-location';
-import { Navigation, Battery, MapPin, Activity, Clock, Car, CheckCircle } from 'lucide-react';
+import { Navigation, Battery, MapPin, Activity, Clock, Car, CheckCircle, AlertTriangle, Bell } from 'lucide-react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { authFetch } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +20,8 @@ export default function DriverDashboard() {
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const [assignedAirbear, setAssignedAirbear] = useState<any>(null);
+    const [showAirbearAlert, setShowAirbearAlert] = useState(false);
+    const [showRideAlert, setShowRideAlert] = useState(false);
     const { isTracking, location, error } = useDriverLocation(assignedAirbear?.id);
 
     // Fetch spots for displaying names
@@ -37,19 +39,35 @@ export default function DriverDashboard() {
         return spot?.name || spotId?.slice(0, 8) || 'Unknown';
     };
 
-    // Check if driver is assigned to an airbear
+    // Check if driver is assigned to an airbear and show alerts
     useEffect(() => {
         if (!user?.id) return;
-        fetch('/api/airbears')
-            .then(res => res.json())
-            .then(airbears => {
+        
+        // Check for available airbears
+        const checkAirbearAvailability = async () => {
+            try {
+                const res = await fetch('/api/airbears');
+                const airbears = await res.json();
                 const myAirbear = airbears.find((a: any) => a.driverId === user.id);
+                const hasAvailable = airbears.some((a: any) => !a.driverId && (a.isAvailable ?? a.is_available ?? a.isavailable));
+                
                 setAssignedAirbear(myAirbear || null);
-            })
-            .catch(() => {});
+                
+                // Show alert if driver has no airbear and there are available ones
+                if (!myAirbear && hasAvailable) {
+                    setShowAirbearAlert(true);
+                } else {
+                    setShowAirbearAlert(false);
+                }
+            } catch () {};
+        };
+
+        checkAirbearAvailability();
+        const interval = setInterval(checkAirbearAvailability, 5000); // Check every 5 seconds
+        return () => clearInterval(interval);
     }, [user?.id]);
 
-    // Fetch pending rides
+    // Fetch pending rides and show alerts
     const { data: pendingRides = [] } = useQuery({
         queryKey: ['rides', 'pending'],
         queryFn: async () => {
@@ -59,6 +77,15 @@ export default function DriverDashboard() {
         },
         refetchInterval: 3000,
     });
+
+    // Show ride alert when there are pending rides and driver has airbear
+    useEffect(() => {
+        if (assignedAirbear && pendingRides.length > 0) {
+            setShowRideAlert(true);
+        } else {
+            setShowRideAlert(false);
+        }
+    }, [assignedAirbear, pendingRides]);
 
     // Fetch my active rides (ones I've accepted)
     const { data: myRides = [] } = useQuery({
@@ -138,24 +165,46 @@ export default function DriverDashboard() {
     const claimAirbear = async () => {
         try {
             const res = await fetch('/api/airbears');
+            if (!res.ok) {
+                throw new Error('Failed to fetch available vehicles');
+            }
             const airbears = await res.json();
             const available = airbears.find((a: any) => !a.driverId && (a.isAvailable ?? a.is_available ?? a.isavailable));
+            
             if (!available) {
-                toast({ title: "No Available Vehicles", description: "All AirBears are currently assigned.", variant: 'destructive' });
+                toast({ 
+                    title: "No Available Vehicles", 
+                    description: "All AirBears are currently assigned. Please check back later.", 
+                    variant: 'destructive' 
+                });
                 return;
             }
+            
             const updateRes = await authFetch(`/api/airbears/${available.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ driverId: user?.id }),
             });
-            if (updateRes.ok) {
-                const updated = await updateRes.json();
-                setAssignedAirbear(updated);
-                toast({ title: "Vehicle Assigned!", description: `You are now driving AirBear ${available.id.slice(0, 8)}` });
+            
+            if (!updateRes.ok) {
+                const errorData = await updateRes.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Failed to assign vehicle');
             }
+            
+            const updated = await updateRes.json();
+            setAssignedAirbear(updated);
+            setShowAirbearAlert(false);
+            toast({ 
+                title: "🚗 Vehicle Assigned!", 
+                description: `You are now driving AirBear ${available.id.slice(0, 8)}. Ready to accept rides!` 
+            });
         } catch (err: any) {
-            toast({ title: "Error", description: err.message, variant: 'destructive' });
+            console.error('Airbear assignment error:', err);
+            toast({ 
+                title: "Assignment Failed", 
+                description: err.message || "Could not assign vehicle. Please try again.", 
+                variant: 'destructive' 
+            });
         }
     };
 
@@ -191,6 +240,73 @@ export default function DriverDashboard() {
                         Welcome, {user.fullName || user.username}
                     </p>
                 </motion.div>
+
+                {/* Alert Banners */}
+                {showAirbearAlert && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-6"
+                    >
+                        <Card className="border-2 border-amber-500 bg-amber-50 dark:bg-amber-950/30">
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-3">
+                                        <motion.div
+                                            animate={{ scale: [1, 1.2, 1] }}
+                                            transition={{ repeat: Infinity, duration: 1 }}
+                                        >
+                                            <Car className="h-6 w-6 text-amber-600" />
+                                        </motion.div>
+                                        <div>
+                                            <h3 className="font-semibold text-amber-800 dark:text-amber-200">
+                                                🚗 Available AirBear Ready!
+                                            </h3>
+                                            <p className="text-sm text-amber-700 dark:text-amber-300">
+                                                Claim your vehicle now to start accepting rides
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Button 
+                                        onClick={claimAirbear} 
+                                        className="bg-amber-500 hover:bg-amber-600 text-white animate-pulse"
+                                    >
+                                        Claim Now
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+                )}
+
+                {showRideAlert && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-6"
+                    >
+                        <Card className="border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30">
+                            <CardContent className="p-4">
+                                <div className="flex items-center space-x-3">
+                                    <motion.div
+                                        animate={{ scale: [1, 1.2, 1] }}
+                                        transition={{ repeat: Infinity, duration: 1 }}
+                                    >
+                                        <Bell className="h-6 w-6 text-emerald-600" />
+                                    </motion.div>
+                                    <div>
+                                        <h3 className="font-semibold text-emerald-800 dark:text-emerald-200">
+                                            🎫 New Ride Request!
+                                        </h3>
+                                        <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                                            {pendingRides.length} pending ride{pendingRides.length > 1 ? 's' : ''} waiting for you
+                                        </p>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+                )}
 
                 {/* Tracking Status */}
                 <motion.div

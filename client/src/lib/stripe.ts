@@ -43,6 +43,8 @@ export interface PaymentResult {
 
 export const createPaymentIntent = async (data: PaymentIntentData): Promise<PaymentResult> => {
   try {
+    console.log('[Stripe] Creating payment intent with data:', data);
+    
     // If Stripe is not configured, return a mock payment intent for demo mode
     if (!isStripeConfigured() && data.paymentMethod !== 'cash') {
       console.log('[Stripe] Demo mode: Creating mock payment intent');
@@ -66,12 +68,28 @@ export const createPaymentIntent = async (data: PaymentIntentData): Promise<Paym
       body: JSON.stringify(data),
     });
 
+    console.log('[Stripe] Payment intent response status:', response.status);
+
     if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Unknown error');
-      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      const errorData = await response.json().catch(() => ({}));
+      console.error('[Stripe] Payment intent creation failed:', errorData);
+      
+      // Handle specific error codes
+      if (errorData.code === 'AUTH_REQUIRED') {
+        throw new Error('Authentication required. Please log in and try again.');
+      } else if (errorData.code === 'STRIPE_NOT_CONFIGURED') {
+        throw new Error('Payment service is not available. Please try again later.');
+      } else if (errorData.code === 'CARD_ERROR') {
+        throw new Error(errorData.message || 'Card payment failed');
+      } else if (errorData.code === 'RATE_LIMIT') {
+        throw new Error('Too many payment attempts. Please wait and try again.');
+      } else {
+        throw new Error(errorData.message || `Payment setup failed (${response.status})`);
+      }
     }
 
     const result = await response.json();
+    console.log('[Stripe] Payment intent created successfully:', result);
 
     if (data.paymentMethod === 'cash') {
       return {
@@ -85,10 +103,11 @@ export const createPaymentIntent = async (data: PaymentIntentData): Promise<Paym
       paymentIntent: result,
     };
   } catch (error: any) {
-    console.error("Payment Intent Error:", error);
-    // Fallback to demo mode on error
-    if (!isStripeConfigured()) {
-      console.warn('[Stripe] Fallback to demo mode due to configuration error:', error.message);
+    console.error('[Stripe] Payment Intent Error:', error);
+    
+    // Fallback to demo mode on authentication errors if Stripe is not configured
+    if (!isStripeConfigured() && error.message?.includes('Authentication')) {
+      console.warn('[Stripe] Fallback to demo mode due to auth error:', error.message);
       return {
         success: true,
         paymentIntent: {
@@ -100,6 +119,7 @@ export const createPaymentIntent = async (data: PaymentIntentData): Promise<Paym
         },
       };
     }
+    
     return {
       success: false,
       error: error.message || 'Payment setup failed',
