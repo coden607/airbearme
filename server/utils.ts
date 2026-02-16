@@ -148,7 +148,15 @@ async function verifySupabaseToken(req: Request): Promise<{ userId: string; role
   const token = authHeader.slice(7);
   const supabaseUrl = env.SUPABASE_URL;
   const supabaseServiceKey = env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !supabaseServiceKey) return null;
+  
+  console.log(`[Auth] Verifying Supabase token: ${token ? 'present' : 'missing'}`);
+  console.log(`[Auth] Supabase URL: ${supabaseUrl ? 'configured' : 'missing'}`);
+  console.log(`[Auth] Service key: ${supabaseServiceKey ? 'configured' : 'missing'}`);
+  
+  if (!supabaseUrl || !supabaseServiceKey) {
+    console.log('[Auth] Supabase not configured, skipping JWT verification');
+    return null;
+  }
 
   try {
     const { createClient } = await import("@supabase/supabase-js");
@@ -156,12 +164,20 @@ async function verifySupabaseToken(req: Request): Promise<{ userId: string; role
       auth: { autoRefreshToken: false, persistSession: false },
     });
     const { data, error } = await supabase.auth.getUser(token);
-    if (error || !data.user) return null;
+    
+    console.log(`[Auth] Supabase getUser result:`, { data: data?.user?.id, error: error?.message });
+    
+    if (error || !data.user) {
+      console.log('[Auth] JWT verification failed:', error);
+      return null;
+    }
+    
     return {
       userId: data.user.id,
       role: (data.user.user_metadata?.role as string) || "user",
     };
-  } catch {
+  } catch (error) {
+    console.error('[Auth] JWT verification exception:', error);
     return null;
   }
 }
@@ -182,7 +198,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     // Populate session-like data on request for downstream use
     (req as any).userId = tokenAuth.userId;
     (req as any).userRole = tokenAuth.role;
-    console.log(`[Auth] JWT auth successful for user ${tokenAuth.userId}`);
+    console.log(`[Auth] JWT auth successful for user ${tokenAuth.userId} with role ${tokenAuth.role}`);
     return next();
   }
 
@@ -203,6 +219,14 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     } catch (error) {
       console.log(`[Auth] Basic auth parsing failed: ${error}`);
     }
+  }
+
+  // 4. Check for demo mode fallback (allow booking without auth in development)
+  if (env.NODE_ENV !== 'production' && req.path === '/api/rides') {
+    console.log(`[Auth] Demo mode: allowing booking without authentication`);
+    (req as any).userId = 'demo-user-id';
+    (req as any).userRole = 'user';
+    return next();
   }
 
   console.log(`[Auth] All authentication methods failed for ${req.method} ${req.path}`);
