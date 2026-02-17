@@ -843,7 +843,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
       // Verify order/ride ownership if provided
       if (orderId) {
-        const order = await storage.getOrder(orderId);
+        const order = await storage.getOrderById(orderId);
         if (!order) {
           return res.status(404).json({ message: "Order not found" });
         }
@@ -853,7 +853,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
       }
 
       if (rideId) {
-        const ride = await storage.getRide(rideId);
+        const ride = await storage.getRideById(rideId);
         if (!ride) {
           return res.status(404).json({ message: "Ride not found" });
         }
@@ -1226,7 +1226,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
               amount: (paymentIntent.amount / 100).toString(), // Convert from cents
               currency: paymentIntent.currency,
               paymentMethod: metadata.paymentMethod || 'stripe',
-              status: 'succeeded',
+              status: 'completed',
               metadata: metadata
             });
             console.log(`[Webhook] Payment record created for ${paymentIntent.id}`);

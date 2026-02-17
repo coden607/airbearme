@@ -678,9 +678,9 @@ class MemStorage implements IStorage {
         co2Saved: insertRide.co2Saved || null,
         isFreeTshirtRide: insertRide.isFreeTshirtRide || false,
         requestedAt: new Date(),
-        acceptedAt: insertRide.acceptedAt || null,
-        startedAt: insertRide.startedAt || null,
-        completedAt: insertRide.completedAt || null,
+        acceptedAt: null,
+        startedAt: null,
+        completedAt: null,
       };
       
       this.rides.set(ride.id, ride);
