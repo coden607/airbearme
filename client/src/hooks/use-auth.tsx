@@ -14,6 +14,7 @@ interface User {
   ecoPoints: number;
   totalRides: number;
   co2Saved: string;
+  hasCeoTshirt?: boolean;
 }
 
 interface AuthContextType {
@@ -77,16 +78,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // If Supabase is not configured, check localStorage for demo user
         if (!client) {
+          // Clear any existing session data
           const storedUser = localStorage.getItem("airbear-user");
           if (storedUser) {
             try {
-              setUser(JSON.parse(storedUser));
-            } catch (parseError) {
-              console.warn('[Auth] Failed to parse stored user data:', parseError);
+              const parsed = JSON.parse(storedUser);
+              if (parsed.id) {
+                localStorage.removeItem("airbear-user");
+              }
+            } catch {
               localStorage.removeItem("airbear-user");
             }
           }
-          console.log("[Auth] Supabase not configured - running in demo mode");
           return;
         }
 
@@ -166,12 +169,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const { data, error } = await client.auth.signInWithPassword({ email, password });
           if (error) {
-            console.log("[Auth] Supabase client signIn failed:", error.message);
           } else if (data.user) {
             supabaseSignInSuccess = true;
           }
         } catch (e) {
-          console.warn("[Auth] Supabase client signIn exception:", e);
         }
       }
 
@@ -218,11 +219,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const { data: sessionData } = await client.auth.getSession();
           if (sessionData.session?.user) {
             await syncProfile(sessionData.session.user);
-            console.log("[Auth] Login via Supabase sync-profile fallback");
-            return;
           }
         } catch (e) {
-          console.warn("[Auth] Supabase sync-profile fallback failed:", e);
         }
       }
 

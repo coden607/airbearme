@@ -190,6 +190,15 @@ export default function Bodega() {
       return;
     }
 
+    if (user.role === 'driver') {
+      toast({
+        title: "Access Restricted",
+        description: "Drivers cannot place bodega orders. This feature is for passengers only.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const orderData = {
       userId: user.id,
       items: cart.map(item => ({

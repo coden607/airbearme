@@ -111,6 +111,29 @@ function CheckoutForm({ clientSecret, orderId, rideId, onSuccess }: CheckoutForm
 export default function Checkout() {
   const { user } = useAuth();
   const { toast } = useToast();
+  
+  // Prevent drivers from accessing checkout
+  if (user?.role === 'driver') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardContent className="p-6 text-center">
+            <h2 className="text-xl font-semibold mb-4">Access Restricted</h2>
+            <p className="text-muted-foreground mb-4">
+              This checkout page is for passengers only. Drivers cannot make purchases or book rides as passengers.
+            </p>
+            <Button 
+              onClick={() => window.location.href = '/driver-dashboard'}
+              className="w-full"
+            >
+              Go to Driver Dashboard
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
   const [paymentMethod, setPaymentMethod] = useState<"stripe" | "cash">("stripe");
   const [clientSecret, setClientSecret] = useState("");
   const [qrCode, setQrCode] = useState("");

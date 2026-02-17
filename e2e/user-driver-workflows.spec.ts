@@ -17,12 +17,18 @@ const DRIVER_CREDENTIALS = {
 
 test.describe('AirBear PWA - User Workflow E2E Tests', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear storage before each test
+    // Clear cookies before each test
     await page.context().clearCookies();
-    await page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
-    });
+    // Safely clear storage - wrap in try-catch
+    try {
+      await page.goto(BASE_URL);
+      await page.evaluate(() => {
+        try {
+          if (window.localStorage) localStorage.clear();
+          if (window.sessionStorage) sessionStorage.clear();
+        } catch (e) { /* ignore */ }
+      });
+    } catch (e) { /* ignore navigation errors */ }
   });
 
   test('User registration and login workflow', async ({ page }) => {
@@ -145,12 +151,18 @@ test.describe('AirBear PWA - User Workflow E2E Tests', () => {
 
 test.describe('AirBear PWA - Driver Workflow E2E Tests', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear storage before each test
+    // Clear cookies before each test
     await page.context().clearCookies();
-    await page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
-    });
+    // Safely clear storage - wrap in try-catch
+    try {
+      await page.goto(BASE_URL);
+      await page.evaluate(() => {
+        try {
+          if (window.localStorage) localStorage.clear();
+          if (window.sessionStorage) sessionStorage.clear();
+        } catch (e) { /* ignore */ }
+      });
+    } catch (e) { /* ignore navigation errors */ }
   });
 
   test('Driver registration and login workflow', async ({ page }) => {

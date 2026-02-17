@@ -46,6 +46,12 @@ export function serveStatic(app: Express) {
     );
   }
 
+  // API route check before static file serving
+  app.use('/api', (req, res, next) => {
+    // Don't handle API routes here - let them pass through to the API routes
+    next();
+  });
+
   // Static assets with aggressive caching
   app.use(express.static(distPath, {
     maxAge: '1y',

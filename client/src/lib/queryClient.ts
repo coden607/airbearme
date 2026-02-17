@@ -3,6 +3,8 @@ import { getSupabaseClient } from "./supabase-client";
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {};
+  
+  // Try Supabase JWT first (for serverless deployments)
   try {
     const supabase = getSupabaseClient(false);
     if (supabase) {
@@ -12,8 +14,11 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
       }
     }
   } catch {
-    // Supabase not configured - rely on session cookies
+    // Supabase not configured
   }
+  
+  // Note: For session-based auth (production server), we rely on cookies
+  // The 'credentials: include' in fetch will automatically send session cookies
   return headers;
 }
 

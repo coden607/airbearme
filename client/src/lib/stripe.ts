@@ -47,7 +47,6 @@ export const createPaymentIntent = async (data: PaymentIntentData): Promise<Paym
     
     // If Stripe is not configured, return a mock payment intent for demo mode
     if (!isStripeConfigured() && data.paymentMethod !== 'cash') {
-      console.log('[Stripe] Demo mode: Creating mock payment intent');
       return {
         success: true,
         paymentIntent: {

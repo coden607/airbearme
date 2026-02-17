@@ -59,7 +59,7 @@ export default function DriverDashboard() {
                 } else {
                     setShowAirbearAlert(false);
                 }
-            } catch () {};
+            } catch { /* ignore */ }
         };
 
         checkAirbearAvailability();
@@ -185,25 +185,26 @@ export default function DriverDashboard() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ driverId: user?.id }),
             });
-            
+
             if (!updateRes.ok) {
                 const errorData = await updateRes.json().catch(() => ({}));
                 throw new Error(errorData.message || 'Failed to assign vehicle');
             }
-            
+
             const updated = await updateRes.json();
-            setAssignedAirbear(updated);
+            console.log('Vehicle assignment response:', updated);
+            setAssignedAirbear(updated.data || updated);
             setShowAirbearAlert(false);
-            toast({ 
-                title: "🚗 Vehicle Assigned!", 
-                description: `You are now driving AirBear ${available.id.slice(0, 8)}. Ready to accept rides!` 
+            toast({
+                title: "Vehicle Assigned!",
+                description: `You are now driving AirBear ${available.id.slice(0, 8)}. Ready to accept rides!`
             });
         } catch (err: any) {
-            console.error('Airbear assignment error:', err);
-            toast({ 
-                title: "Assignment Failed", 
-                description: err.message || "Could not assign vehicle. Please try again.", 
-                variant: 'destructive' 
+            console.error('Vehicle assignment error:', err);
+            toast({
+                title: "Assignment Failed",
+                description: err.message || "Could not assign vehicle. Please try again.",
+                variant: 'destructive'
             });
         }
     };
