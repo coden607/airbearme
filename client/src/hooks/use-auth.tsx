@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { getSupabaseClient } from "@/lib/supabase-client";
@@ -34,6 +34,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
   const { toast } = useToast();
   const supabase = getSupabaseClient(false);
+
+  // Ref to prevent double-redirect during login/register
+  const isRedirectingRef = useRef(false);
 
   const syncProfile = useCallback(async (supabaseUser: SupabaseUser) => {
     const profilePayload = {
@@ -116,6 +119,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const { data: listener } = client.auth.onAuthStateChange(async (event, session) => {
+          // Skip if we're in the middle of a redirect (login/register just completed)
+          if (isRedirectingRef.current) {
+            console.log('[Auth] Skipping onAuthStateChange - redirect in progress');
+            return;
+          }
+
           if (session?.user) {
             await syncProfile(session.user);
           } else if (event === 'SIGNED_OUT') {
@@ -212,6 +221,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(loginUser);
         localStorage.setItem("airbear-user", JSON.stringify(loginUser));
 
+        // Set redirecting flag to prevent onAuthStateChange from causing double refresh
+        isRedirectingRef.current = true;
+
         // Direct navigation after login based on role
         if (loginUser.role === 'driver') {
           window.location.href = '/driver-dashboard';
@@ -301,6 +313,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('[Auth] Register successful, user role:', registerData.user.role);
       setUser(registerData.user);
       localStorage.setItem("airbear-user", JSON.stringify(registerData.user));
+
+      // Set redirecting flag to prevent onAuthStateChange from causing double refresh
+      isRedirectingRef.current = true;
 
       // Direct navigation after register based on role
       if (registerData.user.role === 'driver') {
