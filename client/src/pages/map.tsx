@@ -607,7 +607,8 @@ export default function Map() {
     const fare = calculateFare(passengers);
 
     try {
-      // First, create the ride with "awaiting_payment" status - payment will confirm it
+      // Create the ride with "pending" status - payment will be confirmed at checkout
+      // Note: 'awaiting_payment' requires database migration. Using 'pending' for now.
       const response = await apiRequest('POST', '/api/rides', {
         userId: user.id,
         pickupSpotId: selectedSpot.id,
@@ -615,7 +616,7 @@ export default function Map() {
         airbearId: selectedAirbear?.id || null,
         passengers,
         fare,
-        status: 'awaiting_payment'
+        status: 'pending'
       });
 
       const rideData = await response.json();
@@ -954,32 +955,35 @@ export default function Map() {
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
-          className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-gradient-to-t from-background via-background to-transparent"
+          className="fixed bottom-0 left-0 right-0 z-50 p-4"
+          style={{
+            background: 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.9) 70%, transparent 100%)'
+          }}
         >
           <div className="max-w-2xl mx-auto">
-            <div className="bg-card border-2 border-emerald-500/30 rounded-2xl shadow-2xl p-4">
+            <div className="bg-gradient-to-r from-emerald-900 via-green-900 to-emerald-900 border-2 border-emerald-400 rounded-2xl shadow-2xl shadow-emerald-500/50 p-4">
               {/* Location Summary */}
               <div className="flex items-center gap-3 mb-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 text-sm">
-                    <div className="w-3 h-3 bg-emerald-500 rounded-full" />
-                    <span className="truncate font-medium">
+                    <div className="w-3 h-3 bg-emerald-400 rounded-full animate-pulse" />
+                    <span className="truncate font-semibold text-white">
                       {selectedSpot?.name || 'Select pickup location'}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-sm mt-1">
-                    <div className="w-3 h-3 bg-red-500 rounded-full" />
-                    <span className="truncate text-muted-foreground">
+                    <div className="w-3 h-3 bg-red-400 rounded-full" />
+                    <span className="truncate text-gray-300">
                       {selectedDestination?.name || 'Select destination'}
                     </span>
                   </div>
                 </div>
                 {selectedSpot && selectedDestination && (
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-emerald-600">
+                    <div className="text-3xl font-bold text-emerald-400">
                       ${calculateFare(passengers)}
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs text-emerald-200">
                       {passengers} rider{passengers > 1 ? 's' : ''}
                     </div>
                   </div>
@@ -1031,17 +1035,17 @@ export default function Map() {
 
               {/* Passenger Quick Select */}
               {selectedSpot && selectedDestination && (
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-                  <span className="text-sm text-muted-foreground">Riders:</span>
-                  <div className="flex gap-1">
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-emerald-500/30">
+                  <span className="text-sm text-emerald-200 font-medium">Riders:</span>
+                  <div className="flex gap-2">
                     {[1, 2, 3, 4, 5].map((num) => (
                       <button
                         key={num}
                         onClick={() => setPassengers(num)}
-                        className={`w-8 h-8 rounded-full font-bold text-sm transition-all ${
+                        className={`w-9 h-9 rounded-full font-bold text-sm transition-all ${
                           passengers === num
-                            ? 'bg-emerald-500 text-white scale-110'
-                            : 'bg-muted hover:bg-muted/80'
+                            ? 'bg-emerald-400 text-black scale-110 shadow-lg shadow-emerald-400/50'
+                            : 'bg-emerald-900 text-emerald-200 hover:bg-emerald-800 border border-emerald-600'
                         }`}
                       >
                         {num}
