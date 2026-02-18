@@ -216,7 +216,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (loginUser.role === 'driver') {
           window.location.href = '/driver-dashboard';
         } else {
-          window.location.href = '/dashboard';
+          window.location.href = '/map'; // Users go to map to book rides
         }
         return;
       }
@@ -306,7 +306,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (registerData.user.role === 'driver') {
         window.location.href = '/driver-dashboard';
       } else {
-        window.location.href = '/dashboard';
+        window.location.href = '/map'; // Users go to map to book rides
       }
 
     } catch (error: any) {

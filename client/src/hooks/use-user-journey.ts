@@ -8,6 +8,7 @@ export type JourneyStage =
   | 'guest'              // First-time visitor, not registered
   | 'returning_guest'    // Has visited before, not logged in
   | 'signed_in'          // Logged in, no active ride
+  | 'driver'             // Driver logged in - skip passenger CTAs
   | 'booking_ride'       // On the map page, ready to book
   | 'active_ride'        // Has an active ride in progress
   | 'ride_complete'      // Ride just completed, upsell bodega
@@ -84,6 +85,11 @@ export function useUserJourney() {
       return hasVisitedBefore ? 'returning_guest' : 'guest';
     }
 
+    // Drivers don't need passenger CTAs
+    if (user.role === 'driver') {
+      return 'driver';
+    }
+
     // Check for active ride
     if (activeRide) {
       if (activeRide.status === 'completed') return 'ride_complete';
@@ -133,6 +139,19 @@ export function useUserJourney() {
           icon: 'map',
           priority: 'high',
           pulse: true,
+        };
+
+      case 'driver':
+        // Drivers don't get passenger CTAs - return low priority hidden CTA
+        return {
+          stage,
+          title: '',
+          subtitle: '',
+          action: '',
+          href: '/driver-dashboard',
+          icon: 'map',
+          priority: 'low',
+          pulse: false,
         };
 
       case 'booking_ride':
