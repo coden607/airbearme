@@ -700,10 +700,19 @@ export async function registerRoutes(app: Express): Promise<Express> {
     const authUserRole = getAuthUserRole(req);
     const currentDriverId = (currentAirbear as any).driverId || (currentAirbear as any).driver_id;
     const isCurrentDriver = authUserId && authUserId === currentDriverId;
-    const isClaiming = !currentDriverId && ((updates as any).driverId || (updates as any).driver_id);
+    const requestedDriverId = (updates as any).driverId || (updates as any).driver_id;
+    const isClaiming = !currentDriverId && requestedDriverId;
+    const isDriverClaimingSelf = isClaiming && requestedDriverId === authUserId;
     const isAdmin = authUserRole === "admin";
 
-    if (!isCurrentDriver && !isClaiming && !isAdmin) {
+    console.log('[Airbear] Update check:', {
+      authUserId, authUserRole, currentDriverId, requestedDriverId,
+      isCurrentDriver, isClaiming, isDriverClaimingSelf, isAdmin
+    });
+
+    // Allow: current driver, driver claiming for themselves, or admin
+    if (!isCurrentDriver && !isDriverClaimingSelf && !isAdmin) {
+      console.log('[Airbear] Authorization failed for user:', authUserId);
       res.status(403).json({ message: "Forbidden: you are not authorized to update this airbear" });
       return;
     }
