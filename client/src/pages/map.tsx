@@ -955,35 +955,40 @@ export default function Map() {
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
-          className="fixed bottom-0 left-0 right-0 z-50 p-4"
+          className="fixed left-0 right-0 z-50"
           style={{
-            background: 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.9) 70%, transparent 100%)'
+            bottom: 0,
+            paddingBottom: 'max(env(safe-area-inset-bottom, 20px), 20px)',
+            paddingLeft: '16px',
+            paddingRight: '16px',
+            paddingTop: '16px',
+            background: 'linear-gradient(to top, #000000 0%, #000000 80%, rgba(0,0,0,0.8) 90%, transparent 100%)'
           }}
         >
-          <div className="max-w-2xl mx-auto">
-            <div className="bg-gradient-to-r from-emerald-900 via-green-900 to-emerald-900 border-2 border-emerald-400 rounded-2xl shadow-2xl shadow-emerald-500/50 p-4">
+          <div className="max-w-2xl mx-auto mb-2">
+            <div className="bg-gradient-to-r from-emerald-600 via-green-500 to-emerald-600 border-4 border-white rounded-2xl shadow-2xl shadow-emerald-500/50 p-5">
               {/* Location Summary */}
-              <div className="flex items-center gap-3 mb-3">
+              <div className="flex items-center gap-3 mb-4">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="w-3 h-3 bg-emerald-400 rounded-full animate-pulse" />
-                    <span className="truncate font-semibold text-white">
+                  <div className="flex items-center gap-2 text-base">
+                    <div className="w-4 h-4 bg-white rounded-full animate-pulse shadow-lg" />
+                    <span className="truncate font-bold text-white text-lg">
                       {selectedSpot?.name || 'Select pickup location'}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm mt-1">
-                    <div className="w-3 h-3 bg-red-400 rounded-full" />
-                    <span className="truncate text-gray-300">
+                  <div className="flex items-center gap-2 text-base mt-2">
+                    <div className="w-4 h-4 bg-yellow-400 rounded-full shadow-lg" />
+                    <span className="truncate font-semibold text-white">
                       {selectedDestination?.name || 'Select destination'}
                     </span>
                   </div>
                 </div>
                 {selectedSpot && selectedDestination && (
-                  <div className="text-right">
-                    <div className="text-3xl font-bold text-emerald-400">
+                  <div className="text-right bg-white/20 rounded-xl px-4 py-2">
+                    <div className="text-3xl font-black text-white">
                       ${calculateFare(passengers)}
                     </div>
-                    <div className="text-xs text-emerald-200">
+                    <div className="text-sm text-white font-semibold">
                       {passengers} rider{passengers > 1 ? 's' : ''}
                     </div>
                   </div>
@@ -1000,11 +1005,16 @@ export default function Map() {
                   }
                 }}
                 disabled={!selectedSpot || availableAirbearsCount === 0 || user?.role === 'driver'}
-                className={`w-full h-14 text-lg font-bold transition-all ${
+                className={`w-full h-16 text-xl font-black transition-all rounded-xl ${
                   selectedSpot && selectedDestination
-                    ? 'bg-gradient-to-r from-emerald-500 via-lime-500 to-emerald-500 hover:from-emerald-600 hover:via-lime-600 hover:to-emerald-600 text-white animate-pulse-glow shadow-lg shadow-emerald-500/30'
-                    : 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                    ? 'bg-white hover:bg-gray-100 text-emerald-700 shadow-2xl animate-pulse-glow'
+                    : 'bg-white/90 hover:bg-white text-emerald-700'
                 }`}
+                style={{
+                  boxShadow: selectedSpot && selectedDestination
+                    ? '0 0 30px rgba(255,255,255,0.8), 0 0 60px rgba(16,185,129,0.6)'
+                    : '0 4px 20px rgba(0,0,0,0.3)'
+                }}
               >
                 {user?.role === 'driver' ? (
                   'Use Driver Dashboard'
@@ -1035,17 +1045,17 @@ export default function Map() {
 
               {/* Passenger Quick Select */}
               {selectedSpot && selectedDestination && (
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-emerald-500/30">
-                  <span className="text-sm text-emerald-200 font-medium">Riders:</span>
+                <div className="flex items-center justify-between mt-4 pt-4 border-t-2 border-white/30">
+                  <span className="text-base text-white font-bold">Riders:</span>
                   <div className="flex gap-2">
                     {[1, 2, 3, 4, 5].map((num) => (
                       <button
                         key={num}
                         onClick={() => setPassengers(num)}
-                        className={`w-9 h-9 rounded-full font-bold text-sm transition-all ${
+                        className={`w-10 h-10 rounded-full font-bold text-base transition-all ${
                           passengers === num
-                            ? 'bg-emerald-400 text-black scale-110 shadow-lg shadow-emerald-400/50'
-                            : 'bg-emerald-900 text-emerald-200 hover:bg-emerald-800 border border-emerald-600'
+                            ? 'bg-white text-emerald-700 scale-110 shadow-lg'
+                            : 'bg-white/30 text-white hover:bg-white/50 border-2 border-white/50'
                         }`}
                       >
                         {num}
