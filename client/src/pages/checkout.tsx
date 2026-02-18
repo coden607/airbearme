@@ -158,10 +158,10 @@ export default function Checkout() {
     const passengers = parseInt(urlParams.get('passengers') || '1', 10);
 
     if (rideId && amount > 0) {
-      // Coming from ride booking
+      // Coming from ride booking - DON'T generate a fake orderId, use rideId instead
       const tax = amount * 0.08;
       setOrderData({
-        orderId: orderId || `order_${Date.now()}`,
+        orderId: "", // No orderId for rides - server will use rideId
         rideId: rideId,
         items: [{ name: `AirBear Ride - ${passengers} rider${passengers > 1 ? 's' : ''} @ $4.00 each`, price: amount, quantity: 1 }],
         subtotal: amount,
@@ -256,16 +256,19 @@ export default function Checkout() {
 
   useEffect(() => {
     // Initialize payment intent when method changes and orderData is ready
-    if (orderData.total > 0 && !clientSecret && orderData.orderId) {
+    // For rides: we have rideId but no orderId
+    // For bodega: we have orderId
+    const hasValidOrder = orderData.orderId || orderData.rideId;
+    if (orderData.total > 0 && !clientSecret && hasValidOrder) {
       createPaymentIntentMutation.mutate({
         amount: orderData.total,
-        orderId: orderData.orderId,
-        rideId: orderData.rideId,
+        orderId: orderData.orderId || undefined, // Don't send empty string
+        rideId: orderData.rideId || undefined,
         userId: user?.id,
         paymentMethod,
       });
     }
-  }, [paymentMethod, clientSecret, orderData.total, orderData.orderId]);
+  }, [paymentMethod, clientSecret, orderData.total, orderData.orderId, orderData.rideId]);
 
   const handlePaymentSuccess = async () => {
     setPaymentSuccess(true);

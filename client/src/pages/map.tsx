@@ -760,16 +760,50 @@ export default function Map() {
             return (
               <Card
                 key={spot.id}
-                className={`cursor-pointer transition-all hover:shadow-md ${hasAirbears ? 'border-emerald-500/30 hover:border-emerald-500' : 'hover:border-gray-400'}`}
+                className={`cursor-pointer transition-all hover:shadow-md ${
+                  selectedSpot?.id === spot.id
+                    ? 'border-emerald-500 ring-2 ring-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/20'
+                    : selectedDestination?.id === spot.id
+                      ? 'border-red-500 ring-2 ring-red-500/30 bg-red-50 dark:bg-red-950/20'
+                      : hasAirbears
+                        ? 'border-emerald-500/30 hover:border-emerald-500'
+                        : 'hover:border-gray-400'
+                }`}
                 onClick={() => {
-                  setSelectedSpot(spot);
-                  setShowBookingDialog(true);
+                  // Smart selection: if no pickup, set pickup. If pickup set, set destination.
+                  if (!selectedSpot) {
+                    setSelectedSpot(spot);
+                    toast({ title: "Pickup Selected", description: `${spot.name} - Now select your destination` });
+                  } else if (selectedSpot.id === spot.id) {
+                    // Clicking same spot - open dialog to change or deselect
+                    setShowBookingDialog(true);
+                  } else if (!selectedDestination) {
+                    setSelectedDestination(spot);
+                    toast({ title: "Destination Selected", description: `${spot.name} - Ready to book!` });
+                  } else {
+                    // Both selected, open dialog to modify
+                    setShowBookingDialog(true);
+                  }
                 }}
               >
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <MapPin className={`w-4 h-4 ${hasAirbears ? 'text-emerald-500' : 'text-gray-400'}`} />
+                    <MapPin className={`w-4 h-4 ${
+                      selectedSpot?.id === spot.id
+                        ? 'text-emerald-500'
+                        : selectedDestination?.id === spot.id
+                          ? 'text-red-500'
+                          : hasAirbears
+                            ? 'text-emerald-500'
+                            : 'text-gray-400'
+                    }`} />
                     {spot.name}
+                    {selectedSpot?.id === spot.id && (
+                      <Badge className="ml-auto bg-emerald-500 text-white text-xs">PICKUP</Badge>
+                    )}
+                    {selectedDestination?.id === spot.id && (
+                      <Badge className="ml-auto bg-red-500 text-white text-xs">DROP-OFF</Badge>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -913,6 +947,113 @@ export default function Map() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Sticky Bottom Bar - Shows when pickup OR destination is selected (not in dialog) */}
+      {!showBookingDialog && (selectedSpot || selectedDestination) && !activeRide && (
+        <motion.div
+          initial={{ y: 100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 100, opacity: 0 }}
+          className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-gradient-to-t from-background via-background to-transparent"
+        >
+          <div className="max-w-2xl mx-auto">
+            <div className="bg-card border-2 border-emerald-500/30 rounded-2xl shadow-2xl p-4">
+              {/* Location Summary */}
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="w-3 h-3 bg-emerald-500 rounded-full" />
+                    <span className="truncate font-medium">
+                      {selectedSpot?.name || 'Select pickup location'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm mt-1">
+                    <div className="w-3 h-3 bg-red-500 rounded-full" />
+                    <span className="truncate text-muted-foreground">
+                      {selectedDestination?.name || 'Select destination'}
+                    </span>
+                  </div>
+                </div>
+                {selectedSpot && selectedDestination && (
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-emerald-600">
+                      ${calculateFare(passengers)}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {passengers} rider{passengers > 1 ? 's' : ''}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Book Button with Pulsing Glow */}
+              <Button
+                onClick={() => {
+                  if (selectedSpot && selectedDestination) {
+                    handleBookRide();
+                  } else {
+                    setShowBookingDialog(true);
+                  }
+                }}
+                disabled={!selectedSpot || availableAirbearsCount === 0 || user?.role === 'driver'}
+                className={`w-full h-14 text-lg font-bold transition-all ${
+                  selectedSpot && selectedDestination
+                    ? 'bg-gradient-to-r from-emerald-500 via-lime-500 to-emerald-500 hover:from-emerald-600 hover:via-lime-600 hover:to-emerald-600 text-white animate-pulse-glow shadow-lg shadow-emerald-500/30'
+                    : 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                }`}
+              >
+                {user?.role === 'driver' ? (
+                  'Use Driver Dashboard'
+                ) : availableAirbearsCount === 0 ? (
+                  'No Drivers Available'
+                ) : selectedSpot && selectedDestination ? (
+                  <motion.div
+                    className="flex items-center gap-2"
+                    animate={{ scale: [1, 1.02, 1] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  >
+                    <Car className="w-5 h-5" />
+                    <span>Book My Ride Now!</span>
+                    <motion.span
+                      animate={{ x: [0, 4, 0] }}
+                      transition={{ duration: 0.8, repeat: Infinity }}
+                    >
+                      →
+                    </motion.span>
+                  </motion.div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-5 h-5" />
+                    <span>Select {!selectedSpot ? 'Pickup' : 'Destination'}</span>
+                  </div>
+                )}
+              </Button>
+
+              {/* Passenger Quick Select */}
+              {selectedSpot && selectedDestination && (
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+                  <span className="text-sm text-muted-foreground">Riders:</span>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((num) => (
+                      <button
+                        key={num}
+                        onClick={() => setPassengers(num)}
+                        className={`w-8 h-8 rounded-full font-bold text-sm transition-all ${
+                          passengers === num
+                            ? 'bg-emerald-500 text-white scale-110'
+                            : 'bg-muted hover:bg-muted/80'
+                        }`}
+                      >
+                        {num}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }
