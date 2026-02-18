@@ -701,18 +701,18 @@ export async function registerRoutes(app: Express): Promise<Express> {
     const currentDriverId = (currentAirbear as any).driverId || (currentAirbear as any).driver_id;
     const isCurrentDriver = authUserId && authUserId === currentDriverId;
     const requestedDriverId = (updates as any).driverId || (updates as any).driver_id;
-    const isClaiming = !currentDriverId && requestedDriverId;
-    const isDriverClaimingSelf = isClaiming && requestedDriverId === authUserId;
+    const isUnassigned = !currentDriverId || currentDriverId === null || currentDriverId === '';
+    const isDriverClaimingSelf = isUnassigned && requestedDriverId === authUserId && authUserRole === 'driver';
     const isAdmin = authUserRole === "admin";
 
     console.log('[Airbear] Update check:', {
       authUserId, authUserRole, currentDriverId, requestedDriverId,
-      isCurrentDriver, isClaiming, isDriverClaimingSelf, isAdmin
+      isCurrentDriver, isUnassigned, isDriverClaimingSelf, isAdmin
     });
 
-    // Allow: current driver, driver claiming for themselves, or admin
+    // Allow: current driver updating their airbear, driver claiming unassigned for themselves, or admin
     if (!isCurrentDriver && !isDriverClaimingSelf && !isAdmin) {
-      console.log('[Airbear] Authorization failed for user:', authUserId);
+      console.log('[Airbear] Authorization failed for user:', authUserId, '- airbear has driver:', currentDriverId);
       res.status(403).json({ message: "Forbidden: you are not authorized to update this airbear" });
       return;
     }
