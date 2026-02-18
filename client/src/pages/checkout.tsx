@@ -134,9 +134,10 @@ export default function Checkout() {
     );
   }
   
-  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "cash">("stripe");
+  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "cash" | "promise">("stripe");
   const [clientSecret, setClientSecret] = useState("");
   const [qrCode, setQrCode] = useState("");
+  const [confirmationCode, setConfirmationCode] = useState("");
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [walletLoading, setWalletLoading] = useState({ apple: false, google: false });
   const [orderData, setOrderData] = useState({
@@ -518,15 +519,19 @@ export default function Checkout() {
                 <CardTitle>Payment Method</CardTitle>
               </CardHeader>
               <CardContent>
-                <Tabs value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as "stripe" | "cash")}>
-                  <TabsList className="grid w-full grid-cols-2 mb-6">
+                <Tabs value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as "stripe" | "cash" | "promise")}>
+                  <TabsList className="grid w-full grid-cols-3 mb-6">
                     <TabsTrigger value="stripe" data-testid="tab-card-payment">
                       <CreditCard className="mr-2 h-4 w-4" />
-                      Card Payment
+                      Card
                     </TabsTrigger>
                     <TabsTrigger value="cash" data-testid="tab-cash-payment">
                       <QrCode className="mr-2 h-4 w-4" />
-                      Cash (QR)
+                      Cash
+                    </TabsTrigger>
+                    <TabsTrigger value="promise" data-testid="tab-promise-payment">
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Pay Later
                     </TabsTrigger>
                   </TabsList>
 
@@ -616,41 +621,81 @@ export default function Checkout() {
 
                   <TabsContent value="cash" className="space-y-6">
                     <div className="text-center">
-                      <div className="w-48 h-48 bg-muted/20 rounded-lg mx-auto mb-4 flex items-center justify-center">
-                        {qrCode ? (
-                          <div className="text-center">
-                            <QrCode className="h-20 w-20 mx-auto mb-2 text-primary" />
-                            <p className="text-sm text-muted-foreground">
-                              Show this QR code to your driver
-                            </p>
-                          </div>
-                        ) : createPaymentIntentMutation.isPending ? (
-                          <LoadingSpinner size="md" text="Generating QR..." />
-                        ) : (
-                          <QrCode className="h-20 w-20 text-muted-foreground" />
-                        )}
+                      <div className="w-48 h-48 bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 rounded-lg mx-auto mb-4 flex items-center justify-center border-2 border-dashed border-green-400">
+                        <div className="text-center">
+                          <div className="text-4xl mb-2">💵</div>
+                          <p className="text-lg font-bold text-green-600">
+                            ${orderData.total.toFixed(2)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Pay cash to driver
+                          </p>
+                        </div>
                       </div>
 
                       <h3 className="font-semibold mb-2">Cash Payment</h3>
                       <p className="text-sm text-muted-foreground mb-4">
-                        Pay with cash during your ride. The driver will scan this QR code to confirm payment.
+                        Pay with cash when your driver arrives. Show them this confirmation.
                       </p>
 
-                      <Badge variant="outline" className="border-primary text-primary">
-                        Amount: ${orderData.total.toFixed(2)}
+                      <Badge variant="outline" className="border-green-500 text-green-600 text-lg px-4 py-2">
+                        Code: CASH-{orderData.rideId?.slice(-6).toUpperCase() || 'RIDE'}
                       </Badge>
                     </div>
 
-                    {qrCode && (
-                      <Button
-                        onClick={handlePaymentSuccess}
-                        className="w-full eco-gradient text-white hover-lift"
-                        data-testid="button-confirm-cash-payment"
-                      >
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Confirm Cash Payment Setup
-                      </Button>
-                    )}
+                    <Button
+                      onClick={handlePaymentSuccess}
+                      className="w-full bg-green-500 hover:bg-green-600 text-white"
+                      data-testid="button-confirm-cash-payment"
+                    >
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Confirm Cash Payment - Book My Ride
+                    </Button>
+                  </TabsContent>
+
+                  <TabsContent value="promise" className="space-y-6">
+                    <div className="text-center">
+                      <div className="w-48 h-48 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-lg mx-auto mb-4 flex items-center justify-center border-2 border-dashed border-blue-400">
+                        <div className="text-center">
+                          <div className="text-4xl mb-2">🤝</div>
+                          <p className="text-lg font-bold text-blue-600">
+                            Promise to Pay
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            ${orderData.total.toFixed(2)} later
+                          </p>
+                        </div>
+                      </div>
+
+                      <h3 className="font-semibold mb-2">Pay After Ride</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Book now, pay later! Complete payment after your ride via cash, CashApp, Venmo, or card.
+                      </p>
+
+                      <div className="flex justify-center gap-2 mb-4">
+                        <Badge variant="secondary">💵 Cash</Badge>
+                        <Badge variant="secondary">📱 CashApp</Badge>
+                        <Badge variant="secondary">💜 Venmo</Badge>
+                        <Badge variant="secondary">💳 Card</Badge>
+                      </div>
+
+                      <Badge variant="outline" className="border-blue-500 text-blue-600 text-lg px-4 py-2">
+                        Code: PAY-{orderData.rideId?.slice(-6).toUpperCase() || 'LATER'}
+                      </Badge>
+                    </div>
+
+                    <Button
+                      onClick={handlePaymentSuccess}
+                      className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                      data-testid="button-confirm-promise-payment"
+                    >
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Book Now - Pay After Ride
+                    </Button>
+
+                    <p className="text-xs text-center text-muted-foreground">
+                      By clicking above, you agree to pay ${orderData.total.toFixed(2)} to your driver after your ride.
+                    </p>
                   </TabsContent>
                 </Tabs>
               </CardContent>
