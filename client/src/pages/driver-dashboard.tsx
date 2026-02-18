@@ -163,6 +163,17 @@ export default function DriverDashboard() {
 
     // Assign self to an available airbear
     const claimAirbear = async () => {
+        // Check if user is authenticated
+        if (!user?.id) {
+            toast({
+                title: "Authentication Required",
+                description: "Please sign in again to claim a vehicle.",
+                variant: 'destructive'
+            });
+            window.location.href = '/auth';
+            return;
+        }
+
         try {
             const res = await fetch('/api/airbears');
             if (!res.ok) {
@@ -170,29 +181,42 @@ export default function DriverDashboard() {
             }
             const airbears = await res.json();
             const available = airbears.find((a: any) => !a.driverId && (a.isAvailable ?? a.is_available ?? a.isavailable));
-            
+
             if (!available) {
-                toast({ 
-                    title: "No Available Vehicles", 
-                    description: "All AirBears are currently assigned. Please check back later.", 
-                    variant: 'destructive' 
+                toast({
+                    title: "No Available Vehicles",
+                    description: "All AirBears are currently assigned. Please check back later.",
+                    variant: 'destructive'
                 });
                 return;
             }
-            
+
+            console.log('[DriverDashboard] Claiming vehicle:', available.id, 'for driver:', user.id);
+
             const updateRes = await authFetch(`/api/airbears/${available.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ driverId: user?.id }),
+                body: JSON.stringify({ driverId: user.id }),
             });
 
             if (!updateRes.ok) {
                 const errorData = await updateRes.json().catch(() => ({}));
+                console.error('[DriverDashboard] Claim failed:', errorData);
+
+                if (updateRes.status === 401) {
+                    toast({
+                        title: "Session Expired",
+                        description: "Please sign in again.",
+                        variant: 'destructive'
+                    });
+                    window.location.href = '/auth';
+                    return;
+                }
                 throw new Error(errorData.message || 'Failed to assign vehicle');
             }
 
             const updated = await updateRes.json();
-            console.log('Vehicle assignment response:', updated);
+            console.log('[DriverDashboard] Vehicle assigned:', updated);
             setAssignedAirbear(updated.data || updated);
             setShowAirbearAlert(false);
             toast({
@@ -200,7 +224,7 @@ export default function DriverDashboard() {
                 description: `You are now driving AirBear ${available.id.slice(0, 8)}. Ready to accept rides!`
             });
         } catch (err: any) {
-            console.error('Vehicle assignment error:', err);
+            console.error('[DriverDashboard] Vehicle assignment error:', err);
             toast({
                 title: "Assignment Failed",
                 description: err.message || "Could not assign vehicle. Please try again.",

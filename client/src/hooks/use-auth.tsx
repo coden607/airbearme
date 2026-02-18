@@ -208,8 +208,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           fullName: data.user.fullName,
           avatarUrl: data.user.avatarUrl,
         };
+        console.log('[Auth] Login successful, user role:', loginUser.role);
         setUser(loginUser);
         localStorage.setItem("airbear-user", JSON.stringify(loginUser));
+
+        // Direct navigation after login based on role
+        if (loginUser.role === 'driver') {
+          window.location.href = '/driver-dashboard';
+        } else {
+          window.location.href = '/dashboard';
+        }
         return;
       }
 
@@ -290,8 +298,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Set the user from the API response
+      console.log('[Auth] Register successful, user role:', registerData.user.role);
       setUser(registerData.user);
       localStorage.setItem("airbear-user", JSON.stringify(registerData.user));
+
+      // Direct navigation after register based on role
+      if (registerData.user.role === 'driver') {
+        window.location.href = '/driver-dashboard';
+      } else {
+        window.location.href = '/dashboard';
+      }
 
     } catch (error: any) {
       throw new Error(error.message || "Registration failed");

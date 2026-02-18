@@ -202,13 +202,23 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return next();
   }
 
-  // 3. Check for basic auth header as fallback (for development/testing)
+  // 3. Check for X-User-Id header (localStorage fallback from client)
+  const xUserId = req.headers['x-user-id'];
+  const xUserRole = req.headers['x-user-role'];
+  if (xUserId && typeof xUserId === 'string') {
+    console.log(`[Auth] X-User-Id header auth for user ${xUserId} with role ${xUserRole}`);
+    (req as any).userId = xUserId;
+    (req as any).userRole = (xUserRole as string) || 'user';
+    return next();
+  }
+
+  // 4. Check for basic auth header as fallback (for development/testing)
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Basic ')) {
     try {
       const credentials = Buffer.from(authHeader.slice(6), 'base64').toString('utf-8');
       const [email, password] = credentials.split(':');
-      
+
       // For development: allow basic auth with demo credentials
       if (email === 'demo@airbear.test' && password === 'demo123') {
         (req as any).userId = 'demo-user-id';
@@ -221,7 +231,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     }
   }
 
-  // 4. Check for demo mode fallback (allow booking without auth in development)
+  // 5. Check for demo mode fallback (allow booking without auth in development)
   if (env.NODE_ENV !== 'production' && req.path === '/api/rides') {
     console.log(`[Auth] Demo mode: allowing booking without authentication`);
     (req as any).userId = 'demo-user-id';
