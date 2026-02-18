@@ -23,17 +23,17 @@ DROP POLICY IF EXISTS "Public user profiles" ON users;
 DROP POLICY IF EXISTS "Anyone can read users" ON users;
 DROP POLICY IF EXISTS "public_users_read" ON users;
 
--- Recreate proper user access policy
+-- Recreate proper user access policy (using ::text cast for uuid comparison)
 DROP POLICY IF EXISTS "Users can read own data" ON users;
 CREATE POLICY "Users can read own data" ON users
   FOR SELECT TO authenticated
-  USING (auth.uid() = id);
+  USING (auth.uid()::text = id);
 
 -- Allow users to update their own data
 DROP POLICY IF EXISTS "Users can update own data" ON users;
 CREATE POLICY "Users can update own data" ON users
   FOR UPDATE TO authenticated
-  USING (auth.uid() = id);
+  USING (auth.uid()::text = id);
 
 -- ============================================
 -- PART 2: SYNC DATA BEFORE DROPPING COLUMNS
@@ -91,6 +91,17 @@ ALTER TABLE airbears ADD COLUMN IF NOT EXISTS current_riders integer NOT NULL DE
 
 -- Add passengers to rides if missing
 ALTER TABLE rides ADD COLUMN IF NOT EXISTS passengers integer NOT NULL DEFAULT 1;
+
+-- Add awaiting_payment status to ride_status enum if not exists
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'awaiting_payment' AND enumtypid = 'ride_status'::regtype) THEN
+    ALTER TYPE ride_status ADD VALUE 'awaiting_payment' BEFORE 'pending';
+  END IF;
+EXCEPTION WHEN undefined_object THEN
+  -- ride_status enum doesn't exist, try creating it
+  NULL;
+END $$;
 
 -- ============================================
 -- PART 5: CREATE INDEXES

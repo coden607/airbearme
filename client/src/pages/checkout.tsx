@@ -267,8 +267,24 @@ export default function Checkout() {
     }
   }, [paymentMethod, clientSecret, orderData.total, orderData.orderId]);
 
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = async () => {
     setPaymentSuccess(true);
+
+    // Update ride status to 'pending' so drivers can accept it
+    if (orderData.rideId) {
+      try {
+        await authFetch(`/api/rides/${orderData.rideId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'pending' }),
+        });
+        console.log('[Checkout] Ride status updated to pending');
+      } catch (err) {
+        console.error('[Checkout] Failed to update ride status:', err);
+        // Continue anyway - webhook will also update the status
+      }
+    }
+
     // Redirect to map with ride tracking after delay
     setTimeout(() => {
       if (orderData.rideId) {

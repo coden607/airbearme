@@ -1213,8 +1213,9 @@ export async function registerRoutes(app: Express): Promise<Express> {
               console.log(`[Webhook] Order ${metadata.orderId} marked as completed`);
             }
             if (metadata.rideId) {
-              await storage.updateRide(metadata.rideId, { status: 'completed' });
-              console.log(`[Webhook] Ride ${metadata.rideId} marked as completed`);
+              // Set ride to 'pending' so drivers can accept it (not 'completed')
+              await storage.updateRide(metadata.rideId, { status: 'pending' });
+              console.log(`[Webhook] Ride ${metadata.rideId} marked as pending (ready for driver)`);
             }
 
             // Create payment record

@@ -5,7 +5,7 @@ import { z } from "zod";
 
 // Enums
 export const userRoleEnum = pgEnum("user_role", ["user", "driver", "admin"]);
-export const rideStatusEnum = pgEnum("ride_status", ["pending", "accepted", "in_progress", "completed", "cancelled"]);
+export const rideStatusEnum = pgEnum("ride_status", ["awaiting_payment", "pending", "accepted", "in_progress", "completed", "cancelled"]);
 export const paymentStatusEnum = pgEnum("payment_status", ["pending", "completed", "failed", "refunded"]);
 export const paymentMethodEnum = pgEnum("payment_method", ["stripe", "apple_pay", "google_pay", "cash"]);
 
@@ -176,7 +176,7 @@ export const insertPaymentSchema = createInsertSchema(payments).omit({
 export const updateRideSchema = z.object({
   driverId: z.string().nullable().optional(),
   airbearId: z.string().nullable().optional(),
-  status: z.enum(["pending", "accepted", "in_progress", "completed", "cancelled"]).optional(),
+  status: z.enum(["awaiting_payment", "pending", "accepted", "in_progress", "completed", "cancelled"]).optional(),
   estimatedDuration: z.number().int().positive().nullable().optional(),
   actualDuration: z.number().int().positive().nullable().optional(),
   distance: z.string().nullable().optional(),
