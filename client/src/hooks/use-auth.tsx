@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { getSupabaseClient } from "@/lib/supabase-client";
@@ -14,6 +14,7 @@ interface User {
   ecoPoints: number;
   totalRides: number;
   co2Saved: string;
+  hasCeoTshirt?: boolean;
 }
 
 interface AuthContextType {
@@ -33,6 +34,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
   const { toast } = useToast();
   const supabase = getSupabaseClient(false);
+
+  // Ref to prevent double-redirect during login/register
+  const isRedirectingRef = useRef(false);
 
   const syncProfile = useCallback(async (supabaseUser: SupabaseUser) => {
     const profilePayload = {
@@ -77,16 +81,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // If Supabase is not configured, check localStorage for demo user
         if (!client) {
+          // Clear any existing session data
           const storedUser = localStorage.getItem("airbear-user");
           if (storedUser) {
             try {
-              setUser(JSON.parse(storedUser));
-            } catch (parseError) {
-              console.warn('[Auth] Failed to parse stored user data:', parseError);
+              const parsed = JSON.parse(storedUser);
+              if (parsed.id) {
+                localStorage.removeItem("airbear-user");
+              }
+            } catch {
               localStorage.removeItem("airbear-user");
             }
           }
-          console.log("[Auth] Supabase not configured - running in demo mode");
           return;
         }
 
@@ -113,6 +119,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const { data: listener } = client.auth.onAuthStateChange(async (event, session) => {
+          // Skip if we're in the middle of a redirect (login/register just completed)
+          if (isRedirectingRef.current) {
+            console.log('[Auth] Skipping onAuthStateChange - redirect in progress');
+            return;
+          }
+
           if (session?.user) {
             await syncProfile(session.user);
           } else if (event === 'SIGNED_OUT') {
@@ -166,12 +178,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const { data, error } = await client.auth.signInWithPassword({ email, password });
           if (error) {
-            console.log("[Auth] Supabase client signIn failed:", error.message);
           } else if (data.user) {
             supabaseSignInSuccess = true;
           }
         } catch (e) {
-          console.warn("[Auth] Supabase client signIn exception:", e);
         }
       }
 
@@ -207,8 +217,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           fullName: data.user.fullName,
           avatarUrl: data.user.avatarUrl,
         };
+        console.log('[Auth] Login successful, user role:', loginUser.role);
         setUser(loginUser);
         localStorage.setItem("airbear-user", JSON.stringify(loginUser));
+
+        // Set redirecting flag to prevent onAuthStateChange from causing double refresh
+        isRedirectingRef.current = true;
+
+        // Direct navigation after login based on role
+        if (loginUser.role === 'driver') {
+          window.location.href = '/driver-dashboard';
+        } else {
+          window.location.href = '/map'; // Users go to map to book rides
+        }
         return;
       }
 
@@ -218,11 +239,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const { data: sessionData } = await client.auth.getSession();
           if (sessionData.session?.user) {
             await syncProfile(sessionData.session.user);
-            console.log("[Auth] Login via Supabase sync-profile fallback");
-            return;
           }
         } catch (e) {
-          console.warn("[Auth] Supabase sync-profile fallback failed:", e);
         }
       }
 
@@ -292,8 +310,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Set the user from the API response
+      console.log('[Auth] Register successful, user role:', registerData.user.role);
       setUser(registerData.user);
       localStorage.setItem("airbear-user", JSON.stringify(registerData.user));
+
+      // Set redirecting flag to prevent onAuthStateChange from causing double refresh
+      isRedirectingRef.current = true;
+
+      // Direct navigation after register based on role
+      if (registerData.user.role === 'driver') {
+        window.location.href = '/driver-dashboard';
+      } else {
+        window.location.href = '/map'; // Users go to map to book rides
+      }
 
     } catch (error: any) {
       throw new Error(error.message || "Registration failed");

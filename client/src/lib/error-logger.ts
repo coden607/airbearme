@@ -119,18 +119,8 @@ class ErrorLogger {
 
   // Log custom events/metrics
   logEvent(name: string, data?: Record<string, unknown>): void {
-    if (import.meta.env.DEV) {
-      console.log('[Event]', name, data);
-    }
-
-    // Could send to analytics endpoint
-    fetch('/api/logs/events', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event: name, data, timestamp: new Date().toISOString() }),
-    }).catch(() => {
-      // Silent fail for events
-    });
+    // In production, could send to analytics endpoint
+    // For now, this is a no-op to reduce console noise
   }
 }
 

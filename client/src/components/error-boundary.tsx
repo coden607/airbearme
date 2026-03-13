@@ -10,15 +10,17 @@ interface State {
     hasError: boolean;
     error?: Error;
     errorInfo?: ErrorInfo;
+    retryCount: number;
 }
 
-class ErrorBoundary extends Component<Props, State> {
-    public state: State = {
-        hasError: false
-    };
+export class ErrorBoundary extends Component<Props, State> {
+    constructor(props: Props) {
+        super(props);
+        this.state = { hasError: false, error: undefined, retryCount: 0 };
+    }
 
     public static getDerivedStateFromError(error: Error): State {
-        return { hasError: true, error };
+        return { hasError: true, error, retryCount: 0 };
     }
 
     public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -34,18 +36,22 @@ class ErrorBoundary extends Component<Props, State> {
         }
     }
 
-    private handleReload = () => {
-        try {
-            window.location.reload();
-        } catch (reloadError) {
-            console.error("[ErrorBoundary] Reload failed:", reloadError);
-            // Fallback navigation
-            window.location.href = '/';
+    private handleRetry = () => {
+        if (this.state.retryCount < 3) {
+            this.setState(prevState => ({ 
+                hasError: false, 
+                error: undefined, 
+                retryCount: prevState.retryCount + 1 
+            }));
         }
     };
 
     private handleGoHome = () => {
         window.location.href = '/';
+    };
+
+    private handleReload = () => {
+        window.location.reload();
     };
 
     public render() {

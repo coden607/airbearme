@@ -100,8 +100,13 @@ export default function Auth() {
 
   useEffect(() => {
     if (user) {
-      const redirectUrl = getRedirectUrl();
-      navigate(redirectUrl);
+      // Redirect drivers to driver dashboard, users to regular dashboard
+      if (user.role === 'driver') {
+        navigate('/driver-dashboard');
+      } else {
+        const redirectUrl = getRedirectUrl();
+        navigate(redirectUrl);
+      }
     }
   }, [user, navigate]);
 
@@ -194,8 +199,7 @@ export default function Auth() {
           description: "Your AirBear account has been created successfully",
         });
 
-        const redirectUrl = getRedirectUrl();
-        navigate(redirectUrl);
+        // Navigation is handled by useEffect based on user role
       } else {
         if (!formData.email || !formData.password) {
           throw new Error("Please enter both email and password");
@@ -208,8 +212,7 @@ export default function Auth() {
           description: "You've been signed in successfully",
         });
 
-        const redirectUrl = getRedirectUrl();
-        navigate(redirectUrl);
+        // Navigation is handled by useEffect based on user role
       }
     } catch (error: any) {
       toast({

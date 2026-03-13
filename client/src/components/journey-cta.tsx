@@ -181,8 +181,8 @@ export function FloatingJourneyCTA() {
     setShow(false);
   }, [cta, dismissed]);
 
-  // Don't show on checkout or auth pages
-  if (stage === 'checkout' || stage === 'guest' || stage === 'returning_guest') {
+  // Don't show on checkout, auth pages, or for drivers
+  if (stage === 'checkout' || stage === 'guest' || stage === 'returning_guest' || stage === 'driver') {
     return null;
   }
 

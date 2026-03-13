@@ -663,26 +663,32 @@ class MemStorage implements IStorage {
   }
 
   async createRide(insertRide: InsertRide): Promise<Ride> {
-    const ride: Ride = {
-      ...insertRide,
-      id: (globalThis as any).crypto.randomUUID(),
-      driverId: insertRide.driverId || null,
-      airbearId: insertRide.airbearId || null,
-      status: insertRide.status || "pending",
-      passengers: insertRide.passengers ?? 1,
-      fare: insertRide.fare || "0",
-      distance: insertRide.distance || null,
-      estimatedDuration: insertRide.estimatedDuration || null,
-      actualDuration: insertRide.actualDuration || null,
-      co2Saved: insertRide.co2Saved || null,
-      isFreeTshirtRide: insertRide.isFreeTshirtRide || false,
-      requestedAt: new Date(),
-      acceptedAt: null,
-      startedAt: null,
-      completedAt: null
-    };
-    this.rides.set(ride.id, ride);
-    return ride;
+    try {
+      const ride: Ride = {
+        ...insertRide,
+        id: (globalThis as any).crypto.randomUUID(),
+        driverId: insertRide.driverId || null,
+        airbearId: insertRide.airbearId || null,
+        status: insertRide.status || "pending",
+        passengers: insertRide.passengers ?? 1,
+        fare: insertRide.fare || "0",
+        distance: insertRide.distance || null,
+        estimatedDuration: insertRide.estimatedDuration || null,
+        actualDuration: insertRide.actualDuration || null,
+        co2Saved: insertRide.co2Saved || null,
+        isFreeTshirtRide: insertRide.isFreeTshirtRide || false,
+        requestedAt: new Date(),
+        acceptedAt: null,
+        startedAt: null,
+        completedAt: null,
+      };
+      
+      this.rides.set(ride.id, ride);
+      return ride;
+    } catch (error) {
+      console.error('[Storage] Error creating ride:', error);
+      throw error;
+    }
   }
 
   async updateRide(id: string, updates: Partial<Ride>): Promise<Ride> {

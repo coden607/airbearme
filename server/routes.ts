@@ -14,6 +14,31 @@ const logRouteError = (req: Request, error: unknown) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Express> {
+  // Debug endpoint to check session
+  app.get("/api/debug/session", (req, res) => {
+    res.json({
+      session: req.session,
+      userId: req.session?.userId,
+      userRole: req.session?.userRole,
+      headers: req.headers,
+      cookies: req.headers.cookie
+    });
+  });
+
+  // Test endpoint to set session
+  app.post("/api/debug/set-session", (req, res) => {
+    req.session.userId = "test-user-123";
+    req.session.userRole = "user";
+    req.session.save((err) => {
+      if (err) {
+        console.error('[Session] Save error:', err);
+        res.status(500).json({ error: "Failed to save session" });
+      } else {
+        res.json({ success: true, message: "Session set successfully" });
+      }
+    });
+  });
+
   // Auth helper functions for ownership checks
   const getAuthUserId = (req: Request): string | undefined => req.session?.userId || (req as any).userId;
   const getAuthUserRole = (req: Request): string | undefined => req.session?.userRole || (req as any).userRole;
@@ -161,8 +186,6 @@ export async function registerRoutes(app: Express): Promise<Express> {
       });
       const userData = registerSchema.parse(req.body);
 
-      console.log(`[Auth] Registration attempt for: ${userData.email}`);
-
       // Check for existing user with same email
       const existingUser = await storage.getUserByEmail(userData.email);
       if (existingUser) {
@@ -173,7 +196,6 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
       // If Supabase is available, create auth user first
       if (supabaseAdmin) {
-        console.log(`[Auth] Creating Supabase auth user for: ${userData.email}`);
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
           email: userData.email,
           password: userData.password,
@@ -189,7 +211,6 @@ export async function registerRoutes(app: Express): Promise<Express> {
           console.error(`[Auth] Supabase auth user creation failed:`, authError);
           // If Supabase fails, fall back to local storage
         } else if (authData.user) {
-          console.log(`[Auth] Supabase auth user created: ${authData.user.id}`);
           authUserId = authData.user.id;
         }
       }
@@ -216,7 +237,6 @@ export async function registerRoutes(app: Express): Promise<Express> {
         await storage.setPassword(profile.id, userData.password);
       }
 
-      console.log(`[Auth] Registration successful for: ${userData.email}, user ID: ${profile.id}`);
       req.session.userId = profile.id;
       req.session.userRole = profile.role;
       req.session.save((err) => {
@@ -237,8 +257,6 @@ export async function registerRoutes(app: Express): Promise<Express> {
         password: z.string().min(6),
       }).parse(req.body);
 
-      console.log(`[Auth] Login attempt for: ${email}`);
-
       const sendLoginSuccess = (user: { id: string; email: string; username: string; role: string; ecoPoints: number; totalRides: number; co2Saved: string }) => {
         req.session.userId = user.id;
         req.session.userRole = user.role;
@@ -256,12 +274,10 @@ export async function registerRoutes(app: Express): Promise<Express> {
       // Try Supabase auth first if available (use anon client, fallback to admin for verification)
       const authClient = supabaseAuth || supabaseAdmin;
       if (authClient) {
-        console.log(`[Auth] Trying Supabase auth for: ${email}`);
         try {
           const { data, error } = await authClient.auth.signInWithPassword({ email, password });
 
           if (!error && data.user) {
-            console.log(`[Auth] Supabase signIn success for: ${email}`);
             const profile = await ensureUserProfile({
               email,
               username: (data.user.user_metadata?.username as string) || email.split("@")[0],
@@ -278,15 +294,12 @@ export async function registerRoutes(app: Express): Promise<Express> {
         } catch (supabaseError: any) {
           console.error(`[Auth] Supabase auth exception:`, supabaseError);
         }
-      } else {
-        console.log(`[Auth] Supabase clients not configured`);
       }
 
       // Fallback: verify password hash stored in users table
       if (storage.verifyPassword) {
         const user = await storage.verifyPassword(email, password);
         if (user) {
-          console.log(`[Auth] Password hash auth success for: ${email}`);
           return sendLoginSuccess(toUserResponse(user));
         }
       }
@@ -297,7 +310,6 @@ export async function registerRoutes(app: Express): Promise<Express> {
           const { data: userData } = await supabaseAdmin.from("users").select("*").eq("email", email).maybeSingle();
           if (userData) {
             // User exists in DB but neither auth method worked
-            console.log(`[Auth] User exists in DB but auth failed for: ${email}`);
           }
         } catch (e) {
           // ignore
@@ -305,7 +317,6 @@ export async function registerRoutes(app: Express): Promise<Express> {
       }
 
       // No valid credentials found
-      console.log(`[Auth] All auth methods failed for: ${email}`);
       return res.status(401).json({ message: "Invalid email or password. If you registered recently, please try again or create a new account." });
     } catch (error: any) {
       logRouteError(req, error);
@@ -321,13 +332,10 @@ export async function registerRoutes(app: Express): Promise<Express> {
         email: z.string().email(),
       }).parse(req.body);
 
-      console.log(`[Auth] Password reset requested for: ${email}`);
-
       // Check if user exists
       const user = await storage.getUserByEmail(email);
       if (!user) {
         // Don't reveal whether email exists - always return success
-        console.log(`[Auth] No user found for: ${email} (returning success anyway for security)`);
         return res.json({ success: true, message: "If an account with that email exists, a reset link has been sent." });
       }
 
@@ -340,16 +348,12 @@ export async function registerRoutes(app: Express): Promise<Express> {
         if (error) {
           console.error(`[Auth] Supabase password reset error:`, error);
           // Still return success for security
-        } else {
-          console.log(`[Auth] Password reset email sent via Supabase to: ${email}`);
         }
       } else {
         // For local auth without email service, generate a secure reset token
         const resetToken = crypto.randomUUID();
         const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
         resetTokens.set(resetToken, { email, expiresAt });
-        console.log(`[Auth] Generated reset token for ${email}: ${resetToken}`);
-        console.log(`[Auth] Note: In production, this token would be sent via email`);
       }
 
       res.json({ success: true, message: "If an account with that email exists, a reset link has been sent." });
@@ -369,8 +373,6 @@ export async function registerRoutes(app: Express): Promise<Express> {
         email: z.string().email(),
         newPassword: z.string().min(6),
       }).parse(req.body);
-
-      console.log(`[Auth] Password reset attempt for: ${email}`);
 
       // Validate reset token
       const tokenData = resetTokens.get(token);
@@ -399,7 +401,6 @@ export async function registerRoutes(app: Express): Promise<Express> {
       // Update password in local storage
       if (storage.setPassword) {
         await storage.setPassword(user.id, newPassword);
-        console.log(`[Auth] Password reset successful for: ${email}`);
         return res.json({ success: true, message: "Password has been reset successfully" });
       }
 
@@ -518,14 +519,39 @@ export async function registerRoutes(app: Express): Promise<Express> {
   // Rides routes
   app.post("/api/rides", async (req, res) => {
     try {
-      // Temporarily remove auth requirement for debugging
-      console.log('[Rides] Creating ride (auth temporarily disabled)');
-      
-      const rideData = insertRideSchema.parse(req.body);
+      console.log('[Rides] Creating ride');
 
-      // For now, allow demo booking without auth
-      if (!rideData.userId) {
-        rideData.userId = 'demo-user-id';
+      // Manual validation with proper field handling
+      const rideData = {
+        userId: req.body.userId,
+        pickupSpotId: req.body.pickupSpotId,
+        dropoffSpotId: req.body.dropoffSpotId,
+        passengers: parseInt(req.body.passengers) || 1,
+        fare: typeof req.body?.fare === "number"
+          ? req.body.fare.toFixed(2)
+          : req.body?.fare,
+        airbearId: req.body.airbearId || null,
+        driverId: req.body.driverId || null,
+        status: req.body.status || "pending",
+      };
+
+      // Basic validation
+      if (!rideData.userId || !rideData.pickupSpotId || !rideData.dropoffSpotId) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Ownership check: ride must belong to the authenticated user
+      const authUserId = getAuthUserId(req);
+      const authUserRole = getAuthUserRole(req);
+      if (rideData.userId && authUserId && rideData.userId !== authUserId) {
+        return res.status(403).json({ message: "Cannot create a ride for another user" });
+      }
+
+      // Role restriction: drivers cannot book rides as passengers
+      if (authUserRole === "driver") {
+        return res.status(403).json({
+          message: "Drivers cannot book rides as passengers. This feature is for customers only."
+        });
       }
 
       const ride = await storage.createRide(rideData);
@@ -674,10 +700,19 @@ export async function registerRoutes(app: Express): Promise<Express> {
     const authUserRole = getAuthUserRole(req);
     const currentDriverId = (currentAirbear as any).driverId || (currentAirbear as any).driver_id;
     const isCurrentDriver = authUserId && authUserId === currentDriverId;
-    const isClaiming = !currentDriverId && ((updates as any).driverId || (updates as any).driver_id);
+    const requestedDriverId = (updates as any).driverId || (updates as any).driver_id;
+    const isUnassigned = !currentDriverId || currentDriverId === null || currentDriverId === '';
+    const isDriverClaimingSelf = isUnassigned && requestedDriverId === authUserId && authUserRole === 'driver';
     const isAdmin = authUserRole === "admin";
 
-    if (!isCurrentDriver && !isClaiming && !isAdmin) {
+    console.log('[Airbear] Update check:', {
+      authUserId, authUserRole, currentDriverId, requestedDriverId,
+      isCurrentDriver, isUnassigned, isDriverClaimingSelf, isAdmin
+    });
+
+    // Allow: current driver updating their airbear, driver claiming unassigned for themselves, or admin
+    if (!isCurrentDriver && !isDriverClaimingSelf && !isAdmin) {
+      console.log('[Airbear] Authorization failed for user:', authUserId, '- airbear has driver:', currentDriverId);
       res.status(403).json({ message: "Forbidden: you are not authorized to update this airbear" });
       return;
     }
@@ -717,8 +752,16 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
       // Ownership check: userId must match the authenticated user
       const authUserId = getAuthUserId(req);
+      const authUserRole = getAuthUserRole(req);
       if (orderData.userId !== authUserId) {
         return res.status(403).json({ message: "Forbidden: cannot create order for another user" });
+      }
+
+      // Role restriction: drivers cannot place bodega orders
+      if (authUserRole === "driver") {
+        return res.status(403).json({ 
+          message: "Drivers cannot place bodega orders. This feature is for customers only." 
+        });
       }
 
       const order = await storage.createOrder(orderData);
@@ -809,7 +852,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
       // Verify order/ride ownership if provided
       if (orderId) {
-        const order = await storage.getOrder(orderId);
+        const order = await storage.getOrderById(orderId);
         if (!order) {
           return res.status(404).json({ message: "Order not found" });
         }
@@ -819,7 +862,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
       }
 
       if (rideId) {
-        const ride = await storage.getRide(rideId);
+        const ride = await storage.getRideById(rideId);
         if (!ride) {
           return res.status(404).json({ message: "Ride not found" });
         }
@@ -1108,6 +1151,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
       logRouteError(req, error);
       res.status(500).json({ message: error.message });
     }
+  });
 
   // Webhook for Stripe
   app.post("/api/webhooks/stripe", async (req, res) => {
@@ -1178,8 +1222,9 @@ export async function registerRoutes(app: Express): Promise<Express> {
               console.log(`[Webhook] Order ${metadata.orderId} marked as completed`);
             }
             if (metadata.rideId) {
-              await storage.updateRide(metadata.rideId, { status: 'completed' });
-              console.log(`[Webhook] Ride ${metadata.rideId} marked as completed`);
+              // Set ride to 'pending' so drivers can accept it (not 'completed')
+              await storage.updateRide(metadata.rideId, { status: 'pending' });
+              console.log(`[Webhook] Ride ${metadata.rideId} marked as pending (ready for driver)`);
             }
 
             // Create payment record
@@ -1191,7 +1236,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
               amount: (paymentIntent.amount / 100).toString(), // Convert from cents
               currency: paymentIntent.currency,
               paymentMethod: metadata.paymentMethod || 'stripe',
-              status: 'succeeded',
+              status: 'completed',
               metadata: metadata
             });
             console.log(`[Webhook] Payment record created for ${paymentIntent.id}`);

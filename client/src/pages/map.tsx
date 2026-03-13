@@ -607,7 +607,8 @@ export default function Map() {
     const fare = calculateFare(passengers);
 
     try {
-      // First, create the ride with "awaiting_payment" status - payment will confirm it
+      // Create the ride with "pending" status - payment will be confirmed at checkout
+      // Note: 'awaiting_payment' requires database migration. Using 'pending' for now.
       const response = await apiRequest('POST', '/api/rides', {
         userId: user.id,
         pickupSpotId: selectedSpot.id,
@@ -615,7 +616,7 @@ export default function Map() {
         airbearId: selectedAirbear?.id || null,
         passengers,
         fare,
-        status: 'awaiting_payment'
+        status: 'pending'
       });
 
       const rideData = await response.json();
@@ -760,16 +761,50 @@ export default function Map() {
             return (
               <Card
                 key={spot.id}
-                className={`cursor-pointer transition-all hover:shadow-md ${hasAirbears ? 'border-emerald-500/30 hover:border-emerald-500' : 'hover:border-gray-400'}`}
+                className={`cursor-pointer transition-all hover:shadow-md ${
+                  selectedSpot?.id === spot.id
+                    ? 'border-emerald-500 ring-2 ring-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/20'
+                    : selectedDestination?.id === spot.id
+                      ? 'border-red-500 ring-2 ring-red-500/30 bg-red-50 dark:bg-red-950/20'
+                      : hasAirbears
+                        ? 'border-emerald-500/30 hover:border-emerald-500'
+                        : 'hover:border-gray-400'
+                }`}
                 onClick={() => {
-                  setSelectedSpot(spot);
-                  setShowBookingDialog(true);
+                  // Smart selection: if no pickup, set pickup. If pickup set, set destination.
+                  if (!selectedSpot) {
+                    setSelectedSpot(spot);
+                    toast({ title: "Pickup Selected", description: `${spot.name} - Now select your destination` });
+                  } else if (selectedSpot.id === spot.id) {
+                    // Clicking same spot - open dialog to change or deselect
+                    setShowBookingDialog(true);
+                  } else if (!selectedDestination) {
+                    setSelectedDestination(spot);
+                    toast({ title: "Destination Selected", description: `${spot.name} - Ready to book!` });
+                  } else {
+                    // Both selected, open dialog to modify
+                    setShowBookingDialog(true);
+                  }
                 }}
               >
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <MapPin className={`w-4 h-4 ${hasAirbears ? 'text-emerald-500' : 'text-gray-400'}`} />
+                    <MapPin className={`w-4 h-4 ${
+                      selectedSpot?.id === spot.id
+                        ? 'text-emerald-500'
+                        : selectedDestination?.id === spot.id
+                          ? 'text-red-500'
+                          : hasAirbears
+                            ? 'text-emerald-500'
+                            : 'text-gray-400'
+                    }`} />
                     {spot.name}
+                    {selectedSpot?.id === spot.id && (
+                      <Badge className="ml-auto bg-emerald-500 text-white text-xs">PICKUP</Badge>
+                    )}
+                    {selectedDestination?.id === spot.id && (
+                      <Badge className="ml-auto bg-red-500 text-white text-xs">DROP-OFF</Badge>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -913,6 +948,126 @@ export default function Map() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Sticky Bottom Bar - Shows when pickup OR destination is selected (not in dialog) */}
+      {!showBookingDialog && (selectedSpot || selectedDestination) && !activeRide && (
+        <motion.div
+          initial={{ y: 100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 100, opacity: 0 }}
+          className="fixed left-0 right-0 z-50"
+          style={{
+            bottom: 0,
+            paddingBottom: 'max(env(safe-area-inset-bottom, 20px), 20px)',
+            paddingLeft: '16px',
+            paddingRight: '16px',
+            paddingTop: '16px',
+            background: 'linear-gradient(to top, #000000 0%, #000000 80%, rgba(0,0,0,0.8) 90%, transparent 100%)'
+          }}
+        >
+          <div className="max-w-2xl mx-auto mb-2">
+            <div className="bg-gradient-to-r from-emerald-600 via-green-500 to-emerald-600 border-4 border-white rounded-2xl shadow-2xl shadow-emerald-500/50 p-5">
+              {/* Location Summary */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 text-base">
+                    <div className="w-4 h-4 bg-white rounded-full animate-pulse shadow-lg" />
+                    <span className="truncate font-bold text-white text-lg">
+                      {selectedSpot?.name || 'Select pickup location'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-base mt-2">
+                    <div className="w-4 h-4 bg-yellow-400 rounded-full shadow-lg" />
+                    <span className="truncate font-semibold text-white">
+                      {selectedDestination?.name || 'Select destination'}
+                    </span>
+                  </div>
+                </div>
+                {selectedSpot && selectedDestination && (
+                  <div className="text-right bg-white/20 rounded-xl px-4 py-2">
+                    <div className="text-3xl font-black text-white">
+                      ${calculateFare(passengers)}
+                    </div>
+                    <div className="text-sm text-white font-semibold">
+                      {passengers} rider{passengers > 1 ? 's' : ''}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Book Button with Pulsing Glow */}
+              <Button
+                onClick={() => {
+                  if (selectedSpot && selectedDestination) {
+                    handleBookRide();
+                  } else {
+                    setShowBookingDialog(true);
+                  }
+                }}
+                disabled={!selectedSpot || availableAirbearsCount === 0 || user?.role === 'driver'}
+                className={`w-full h-16 text-xl font-black transition-all rounded-xl ${
+                  selectedSpot && selectedDestination
+                    ? 'bg-white hover:bg-gray-100 text-emerald-700 shadow-2xl animate-pulse-glow'
+                    : 'bg-white/90 hover:bg-white text-emerald-700'
+                }`}
+                style={{
+                  boxShadow: selectedSpot && selectedDestination
+                    ? '0 0 30px rgba(255,255,255,0.8), 0 0 60px rgba(16,185,129,0.6)'
+                    : '0 4px 20px rgba(0,0,0,0.3)'
+                }}
+              >
+                {user?.role === 'driver' ? (
+                  'Use Driver Dashboard'
+                ) : availableAirbearsCount === 0 ? (
+                  'No Drivers Available'
+                ) : selectedSpot && selectedDestination ? (
+                  <motion.div
+                    className="flex items-center gap-2"
+                    animate={{ scale: [1, 1.02, 1] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  >
+                    <Car className="w-5 h-5" />
+                    <span>Book My Ride Now!</span>
+                    <motion.span
+                      animate={{ x: [0, 4, 0] }}
+                      transition={{ duration: 0.8, repeat: Infinity }}
+                    >
+                      →
+                    </motion.span>
+                  </motion.div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-5 h-5" />
+                    <span>Select {!selectedSpot ? 'Pickup' : 'Destination'}</span>
+                  </div>
+                )}
+              </Button>
+
+              {/* Passenger Quick Select */}
+              {selectedSpot && selectedDestination && (
+                <div className="flex items-center justify-between mt-4 pt-4 border-t-2 border-white/30">
+                  <span className="text-base text-white font-bold">Riders:</span>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map((num) => (
+                      <button
+                        key={num}
+                        onClick={() => setPassengers(num)}
+                        className={`w-10 h-10 rounded-full font-bold text-base transition-all ${
+                          passengers === num
+                            ? 'bg-white text-emerald-700 scale-110 shadow-lg'
+                            : 'bg-white/30 text-white hover:bg-white/50 border-2 border-white/50'
+                        }`}
+                      >
+                        {num}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }

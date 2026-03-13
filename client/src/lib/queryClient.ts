@@ -3,17 +3,38 @@ import { getSupabaseClient } from "./supabase-client";
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {};
+
+  // Always add localStorage user info as fallback (X-User-Id, X-User-Role)
+  try {
+    const storedUser = localStorage.getItem("airbear-user");
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      if (user.id) {
+        headers["X-User-Id"] = user.id;
+        headers["X-User-Role"] = user.role || "user";
+        console.log('[Auth] Adding user headers from localStorage:', user.id, 'role:', user.role);
+      }
+    }
+  } catch {
+    // localStorage not available
+  }
+
+  // Also try Supabase JWT (for serverless deployments)
   try {
     const supabase = getSupabaseClient(false);
     if (supabase) {
       const { data } = await supabase.auth.getSession();
       if (data.session?.access_token) {
         headers["Authorization"] = `Bearer ${data.session.access_token}`;
+        console.log('[Auth] Also using Supabase JWT');
       }
     }
   } catch {
-    // Supabase not configured - rely on session cookies
+    // Supabase not configured
   }
+
+  // Note: For session-based auth (production server), we rely on cookies
+  // The 'credentials: include' in fetch will automatically send session cookies
   return headers;
 }
 
