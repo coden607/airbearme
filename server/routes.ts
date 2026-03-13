@@ -14,30 +14,31 @@ const logRouteError = (req: Request, error: unknown) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Express> {
-  // Debug endpoint to check session
-  app.get("/api/debug/session", (req, res) => {
-    res.json({
-      session: req.session,
-      userId: req.session?.userId,
-      userRole: req.session?.userRole,
-      headers: req.headers,
-      cookies: req.headers.cookie
+  // Debug endpoints - only enabled in non-production environments
+  if (app.get("env") !== "production") {
+    app.get("/api/debug/session", (req, res) => {
+      res.json({
+        session: req.session,
+        userId: req.session?.userId,
+        userRole: req.session?.userRole,
+        headers: req.headers,
+        cookies: req.headers.cookie
+      });
     });
-  });
 
-  // Test endpoint to set session
-  app.post("/api/debug/set-session", (req, res) => {
-    req.session.userId = "test-user-123";
-    req.session.userRole = "user";
-    req.session.save((err) => {
-      if (err) {
-        console.error('[Session] Save error:', err);
-        res.status(500).json({ error: "Failed to save session" });
-      } else {
-        res.json({ success: true, message: "Session set successfully" });
-      }
+    app.post("/api/debug/set-session", (req, res) => {
+      req.session.userId = "test-user-123";
+      req.session.userRole = "user";
+      req.session.save((err) => {
+        if (err) {
+          console.error('[Session] Save error:', err);
+          res.status(500).json({ error: "Failed to save session" });
+        } else {
+          res.json({ success: true, message: "Session set successfully" });
+        }
+      });
     });
-  });
+  }
 
   // Auth helper functions for ownership checks
   const getAuthUserId = (req: Request): string | undefined => req.session?.userId || (req as any).userId;
@@ -88,8 +89,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
     res.json({
       status: "ok",
       timestamp: new Date().toISOString(),
-      deployment: "a0bf1e3",
-      authDisabled: true
+      deployment: "a0bf1e3"
     });
   });
 
@@ -517,7 +517,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Rides routes
-  app.post("/api/rides", async (req, res) => {
+  app.post("/api/rides", requireAuth, async (req, res) => {
     try {
       console.log('[Rides] Creating ride');
 
