@@ -1,0 +1,7 @@
+76.38.179.0 - - [17/Nov/2025:04:16:28 -0500] "GET / HTTP/1.1" 403 199 airbear.me "-" "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:145.0) Gecko/20100101 Firefox/145.0" "-"
+76.38.179.0 - - [17/Nov/2025:04:16:28 -0500] "GET / HTTP/1.1" 403 199 airbear.me "-" "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:145.0) Gecko/20100101 Firefox/145.0" "-"
+76.38.179.0 - - [17/Nov/2025:04:16:29 -0500] "GET /favicon.ico HTTP/1.1" 404 196 airbear.me "http://airbear.me/" "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:145.0) Gecko/20100101 Firefox/145.0" "-"
+76.38.179.0 - - [17/Nov/2025:04:16:40 -0500] "GET / HTTP/1.1" 403 199 airbear.me "-" "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:145.0) Gecko/20100101 Firefox/145.0" "-"
+76.38.179.0 - - [17/Nov/2025:04:16:41 -0500] "GET /favicon.ico HTTP/1.1" 404 196 airbear.me "https://airbear.me/" "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:145.0) Gecko/20100101 Firefox/145.0" "-"
+76.38.179.0 - - [17/Nov/2025:04:16:44 -0500] "GET / HTTP/1.1" 403 199 airbear.me "-" "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:145.0) Gecko/20100101 Firefox/145.0" "-"
+76.38.179.0 - - [17/Nov/2025:04:16:45 -0500] "GET /favicon.ico HTTP/1.1" 404 196 airbear.me "https://airbear.me/" "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:145.0) Gecko/20100101 Firefox/145.0" "-"
