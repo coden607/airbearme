@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,6 +64,16 @@ interface CartItem extends BodegaItem {
   quantity: number;
 }
 
+const CATEGORIES = [
+  { id: "all", name: "All", Icon: LayoutGrid },
+  { id: "beverages", name: "Drinks", Icon: Coffee },
+  { id: "food", name: "Food", Icon: Apple },
+  { id: "snacks", name: "Snacks", Icon: Cookie },
+  { id: "electronics", name: "Tech", Icon: Smartphone },
+  { id: "health", name: "Health", Icon: Heart },
+  { id: "accessories", name: "Gear", Icon: ShoppingBag },
+];
+
 export default function Bodega() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -76,7 +86,7 @@ export default function Bodega() {
   const [showSparkles, setShowSparkles] = useState<string | null>(null);
 
   const { data: items, isLoading } = useQuery<BodegaItem[]>({
-    queryKey: ["bodega-items", selectedCategory],
+    queryKey: ["bodega-items"],
     queryFn: async () => {
       const response = await fetch('/api/bodega-items');
       if (!response.ok) throw new Error('Failed to fetch');
@@ -122,22 +132,17 @@ export default function Bodega() {
     },
   });
 
-  const categories = [
-    { id: "all", name: "All", Icon: LayoutGrid },
-    { id: "beverages", name: "Drinks", Icon: Coffee },
-    { id: "food", name: "Food", Icon: Apple },
-    { id: "snacks", name: "Snacks", Icon: Cookie },
-    { id: "electronics", name: "Tech", Icon: Smartphone },
-    { id: "health", name: "Health", Icon: Heart },
-    { id: "accessories", name: "Gear", Icon: ShoppingBag },
-  ];
+  const filteredItems = useMemo(() => {
+    if (!items) return [];
 
-  const filteredItems = items?.filter(item => {
-    const matchesCategory = selectedCategory === "all" || item.category === selectedCategory;
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  }) || [];
+    const query = searchQuery.toLowerCase();
+    return items.filter(item => {
+      const matchesCategory = selectedCategory === "all" || item.category === selectedCategory;
+      const matchesSearch = item.name.toLowerCase().includes(query) ||
+                           (item.description?.toLowerCase() ?? "").includes(query);
+      return matchesCategory && matchesSearch;
+    });
+  }, [items, selectedCategory, searchQuery]);
 
   const addToCart = (item: BodegaItem, quantity: number = 1) => {
     setCart(prevCart => {
@@ -280,7 +285,7 @@ export default function Bodega() {
         >
           <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="mb-8">
             <TabsList className="flex flex-wrap justify-center gap-1 bg-muted/50 h-auto p-2">
-              {categories.map((category) => (
+              {CATEGORIES.map((category) => (
                 <TabsTrigger 
                   key={category.id}
                   value={category.id}
