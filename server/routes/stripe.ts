@@ -7,7 +7,8 @@ const router = Router();
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY!;
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET!;
 
-const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2024-06-20' });
+// Use the SDK/account default instead of pinning this route to an obsolete API version.
+const stripe = new Stripe(STRIPE_SECRET_KEY);
 
 router.post('/payments/create-checkout-session', async (req, res) => {
   const { lineItems, successUrl, cancelUrl, userId } = req.body;

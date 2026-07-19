@@ -1,12 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import LoadingSpinner from '../loading-spinner';
 
-declare global {
-  interface Window {
-    L: any;
-  }
-}
-
 interface MapComponentProps {
   center?: [number, number];
   zoom?: number;
@@ -33,7 +27,8 @@ export const MapComponent: React.FC<MapComponentProps> = ({
 
     const initMap = () => {
       try {
-        if (!window.L) {
+        const leaflet = (window as any).L;
+        if (!leaflet) {
           throw new Error('Leaflet not loaded');
         }
 
@@ -45,18 +40,18 @@ export const MapComponent: React.FC<MapComponentProps> = ({
           container.style.width = '100%';
         }
 
-        const map = window.L.map(container, {
+        const map = leaflet.map(container, {
           center,
           zoom,
           zoomControl: false,
           preferCanvas: true,
           // @ts-ignore - This is a valid Leaflet option
           tap: false, // Prevents tap delay on mobile
-          renderer: window.L.canvas() // Better performance
+          renderer: leaflet.canvas() // Better performance
         });
 
         // Add tile layer with error handling
-        const tileLayer = window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        const tileLayer = leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap contributors',
           maxZoom: 19,
           detectRetina: true,
@@ -74,7 +69,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
         }, 0);
 
         // Add zoom control
-        window.L.control.zoom({
+        leaflet.control.zoom({
           position: 'topright',
         }).addTo(map);
 
