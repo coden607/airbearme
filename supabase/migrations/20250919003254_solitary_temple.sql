@@ -27,6 +27,7 @@
 
 -- Enable necessary extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+SET search_path = public, extensions;
 
 -- Create enums
 CREATE TYPE user_role AS ENUM ('user', 'driver', 'admin');

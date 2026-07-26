@@ -1,0 +1,1 @@
+-- This migration was created during the initial hardening attempt; the applied operation was intentionally empty. Subsequent hardening is in 20260726223259_harden_airbear_rls_and_indexes_v2.sql.

@@ -126,11 +126,11 @@ WHERE NOT EXISTS (SELECT 1 FROM public.spots s WHERE s.name = v.name);
 
 INSERT INTO public.bodega_items (name, description, price, category, is_eco_friendly, stock)
 SELECT * FROM (VALUES
-  ('Cold Brew Coffee','Smooth cold brew coffee','4.50','beverages',true,25),
-  ('Green Smoothie Bowl','Organic spinach, banana, almond milk','8.75','food',true,15),
-  ('Avocado Toast','Sourdough with avocado and microgreens','7.25','food',true,20),
-  ('Sparkling Water','Recyclable glass bottle','2.50','beverages',true,30),
-  ('Trail Mix','Nuts, cranberries, and chocolate','5.25','snacks',true,35)
+  ('Cold Brew Coffee','Smooth cold brew coffee',4.50,'beverages',true,25),
+  ('Green Smoothie Bowl','Organic spinach, banana, almond milk',8.75,'food',true,15),
+  ('Avocado Toast','Sourdough with avocado and microgreens',7.25,'food',true,20),
+  ('Sparkling Water','Recyclable glass bottle',2.50,'beverages',true,30),
+  ('Trail Mix','Nuts, cranberries, and chocolate',5.25,'snacks',true,35)
 ) AS v(name, description, price, category, is_eco_friendly, stock)
 WHERE NOT EXISTS (SELECT 1 FROM public.bodega_items b WHERE b.name = v.name);
 
