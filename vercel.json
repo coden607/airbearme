@@ -1,5 +1,6 @@
 {
     "buildCommand": "npm run vercel-build",
+    "installCommand": "npm ci --include=dev",
     "outputDirectory": "dist/public",
     "functions": {
         "api/[...path].ts": {
