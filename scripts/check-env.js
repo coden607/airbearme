@@ -50,6 +50,11 @@ for (const group of requiredGroups) {
   }
 }
 
+if (missing.length > 0 && (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production")) {
+  console.error("Production deployment blocked: required environment variables are missing.");
+  process.exit(1);
+}
+
 if (missing.length > 0) {
   console.warn('⚠️  Missing some environment variables for production deploy:');
   for (const entry of missing) {

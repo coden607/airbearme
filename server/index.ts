@@ -5,6 +5,10 @@ import { registerRoutes } from "./routes.js";
 import { log, env, errorHandler } from "./utils.js";
 
 const app = express();
+const isProduction = env.NODE_ENV === "production" || env.VERCEL_ENV === "production";
+if (isProduction && !env.SESSION_SECRET) {
+  throw new Error("SESSION_SECRET must be configured in production");
+}
 app.use((req, res, next) => {
   const incomingRequestId = req.get("x-request-id");
   const requestId = incomingRequestId && incomingRequestId.length < 128
@@ -33,7 +37,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false, // Set to false for localhost testing
+    secure: isProduction,
     httpOnly: true,
     sameSite: "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days

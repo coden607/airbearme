@@ -45,18 +45,9 @@ export const createPaymentIntent = async (data: PaymentIntentData): Promise<Paym
   try {
     console.log('[Stripe] Creating payment intent with data:', data);
     
-    // If Stripe is not configured, return a mock payment intent for demo mode
-    if (!isStripeConfigured() && data.paymentMethod !== 'cash') {
-      return {
-        success: true,
-        paymentIntent: {
-          clientSecret: `mock_${Date.now()}_secret`,
-          id: `mock_pi_${Date.now()}`,
-          amount: data.amount * 100,
-          currency: data.currency || 'usd',
-          status: 'requires_payment_method',
-        },
-      };
+    // Never fabricate a successful payment in production or development.
+    if (!isStripeConfigured() && data.paymentMethod !== "cash") {
+      return { success: false, error: "Payment service is not configured." };
     }
 
     const response = await authFetch('/api/create-payment-intent', {
@@ -103,21 +94,6 @@ export const createPaymentIntent = async (data: PaymentIntentData): Promise<Paym
     };
   } catch (error: any) {
     console.error('[Stripe] Payment Intent Error:', error);
-    
-    // Fallback to demo mode on authentication errors if Stripe is not configured
-    if (!isStripeConfigured() && error.message?.includes('Authentication')) {
-      console.warn('[Stripe] Fallback to demo mode due to auth error:', error.message);
-      return {
-        success: true,
-        paymentIntent: {
-          clientSecret: `mock_${Date.now()}_secret`,
-          id: `mock_pi_${Date.now()}`,
-          amount: data.amount * 100,
-          currency: data.currency || 'usd',
-          status: 'demo_mode',
-        },
-      };
-    }
     
     return {
       success: false,

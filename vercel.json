@@ -1,20 +1,34 @@
 {
-    "buildCommand": "npm run vercel-build",
-    "installCommand": "npm ci --include=dev",
-    "outputDirectory": "dist/public",
-    "functions": {
-        "api/[...path].ts": {
-            "includeFiles": "dist/**"
-        }
+  "builds": [
+    {
+      "src": "api/[...path].ts",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["dist/**"]
+      }
     },
-    "rewrites": [
-        {
-            "source": "/api/:path*",
-            "destination": "/api/[...path].ts"
-        },
-        {
-            "source": "/:path*",
-            "destination": "/index.html"
-        }
-    ]
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "buildCommand": "npm run vercel-build",
+        "installCommand": "npm ci --include=dev",
+        "outputDirectory": "dist/public"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "^/api(?:/(.*))?$",
+      "dest": "/api/[...path].ts",
+      "continue": true
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "^/(.*)$",
+      "dest": "/index.html"
+    }
+  ]
 }
