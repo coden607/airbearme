@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
 
 jobs:
   # Type checking and linting
@@ -102,7 +102,7 @@ jobs:
           sleep 10
         env:
           USE_MOCK_DATABASE: 'true'
-          NODE_ENV: production
+          NODE_ENV: test
           VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_STRIPE_PUBLIC_KEY: ${{ secrets.VITE_STRIPE_PUBLIC_KEY }}
@@ -176,7 +176,7 @@ jobs:
       - name: Verify deployment
         run: |
           sleep 30
-          response=$(curl -s https://airbear-pwa4-live.vercel.app/api/health)
+          response=$(curl -s https://pwa4-seven.vercel.app/api/health)
           if echo "$response" | grep -q "ok"; then
             echo "✅ Production deployment verified"
           else

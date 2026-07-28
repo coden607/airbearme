@@ -67,7 +67,7 @@ export default function Home() {
 
   // Derive analytics from public endpoints (spots + airbears) to avoid hitting admin-only endpoint
   const analytics: Analytics | undefined = spots && airbears ? {
-    totalSpots: spots.length || 16,
+    totalSpots: spots.length,
     totalAirbears: airbears.length || 0,
     activeAirbears: airbears.filter((a: Airbear) => (a.isAvailable ?? a.is_available ?? false)).length,
     chargingAirbears: airbears.filter((a: Airbear) => (a.isCharging ?? a.is_charging ?? false)).length,
@@ -259,7 +259,7 @@ export default function Home() {
                 {isLoading ? (
                   <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                 ) : (
-                  analytics?.totalSpots || 16
+                  analytics?.totalSpots ?? 0
                 )}
               </div>
               <div className="text-sm text-muted-foreground">Active Spots</div>

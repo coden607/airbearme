@@ -3,7 +3,6 @@ import { storage } from "./storage.js";
 import { insertRideSchema, insertOrderSchema, insertPaymentSchema, updateRideSchema, updateAirbearSchema } from "../shared/schema.js";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
-import { getActiveSpotsData } from "../shared/spots-data.js";
 import { env, ApiError, asyncHandler, requireAuth, requireAdmin, hmacSha256, safeCompare } from "./utils.js";
 
 
@@ -444,15 +443,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   // Spots routes
   app.get("/api/spots", async (req, res) => {
     try {
-      // Try to get from storage first
       const storageSpots = await storage.getAllSpots();
-
-      // If storage has insufficient spots, fallback to shared spots data
-      if (storageSpots.length < 16) {
-        const sharedSpots = getActiveSpotsData();
-        return res.json(sharedSpots);
-      }
-
       res.json(storageSpots);
     } catch (error) {
       logRouteError(req, error);

@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import LoadingSpinner from "@/components/loading-spinner";
-import { getActiveSpots } from "@/lib/spots";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest, authFetch } from "@/lib/queryClient";
 import AirbearAvatar from "@/components/airbear-avatar";
@@ -220,9 +219,7 @@ export default function Map() {
     queryFn: async () => {
       try {
         const response = await fetch('/api/spots');
-        if (!response.ok) {
-          return getActiveSpots();
-        }
+        if (!response.ok) throw new Error("Failed to fetch live spots");
         const data = await response.json();
         return data.map((spot: SpotApiResponse) => ({
           ...spot,
@@ -230,8 +227,9 @@ export default function Map() {
           longitude: Number(spot.longitude),
           isActive: spot.isActive ?? spot.is_active ?? true,
         }));
-      } catch {
-        return getActiveSpots();
+      } catch (error) {
+        console.error("Failed to fetch live spots:", error);
+        throw error;
       }
     },
     staleTime: 30000,

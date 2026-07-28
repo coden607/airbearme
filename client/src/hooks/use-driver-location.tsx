@@ -119,14 +119,14 @@ export function useDriverLocation(airbearId: string) {
 /**
  * Hook for customers and admins to subscribe to airbear location updates
  * Uses Supabase Realtime for instant updates, API polling as fallback,
- * and simulated movement for smooth demo visualization
+ * and polling for live updates when realtime delivery is delayed
  */
 export function useAirbearLocationUpdates() {
     const [airbears, setAirbears] = useState<any[]>([]);
     const supabase = getSupabaseClient(false);
 
     useEffect(() => {
-        // Initial fetch from API (works with both Supabase and MemStorage)
+        // Initial fetch from the live API
         const fetchAirbears = async () => {
             try {
                 const response = await fetch('/api/airbears');

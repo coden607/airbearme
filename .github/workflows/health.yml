@@ -19,7 +19,7 @@ jobs:
           set -o pipefail
           curl --fail --silent --show-error --max-time 20 \
             -H 'Accept: application/json' \
-            https://airbear-pwa4-live.vercel.app/api/health | tee health.json
+            https://pwa4-seven.vercel.app/api/health | tee health.json
           jq -e '.status == "ok"' health.json
 
       - name: Open a deduplicated incident issue

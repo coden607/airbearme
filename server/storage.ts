@@ -1129,10 +1129,16 @@ const isUsingTestCredentials =
   supabaseUrl?.includes('test-project.supabase.co') ||
   supabaseServiceRoleKey?.includes('test-supabase-secret-key-for-development-only');
 
-// Use MemStorage for development or when USE_MOCK_DATABASE is explicitly set
-const useMockDatabase = env.USE_MOCK_DATABASE === 'true' ||
+const isProduction = env.NODE_ENV === "production" || env.VERCEL_ENV === "production";
+
+// Mock storage is intentionally unavailable in production. Production must use live Supabase data.
+const useMockDatabase = !isProduction && (env.USE_MOCK_DATABASE === "true" ||
                        env.NODE_ENV === "development" ||
-                       env.VERCEL_ENV === 'development';
+                       env.VERCEL_ENV === "development");
+
+if (isProduction && (isUsingTestCredentials || !supabaseUrl || !supabaseServiceRoleKey)) {
+  throw new Error("Production requires live Supabase credentials; mock storage is disabled");
+}
 
 export const storage: IStorage = !isUsingTestCredentials && !useMockDatabase && supabaseUrl && supabaseServiceRoleKey
   ? (() => {
