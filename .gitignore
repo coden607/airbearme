@@ -211,3 +211,4 @@ pnpm-lock.yaml
 airbear-pwa.tar.gz
 workbox-*.js
 *.local
+.env*
