@@ -113,6 +113,8 @@
     "bufferutil": "^4.0.8"
   },
   "overrides": {
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.0",
+    "braces": "^3.0.3",
+    "postcss-selector-parser": "^7.1.6"
   }
 }

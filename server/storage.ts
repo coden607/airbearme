@@ -506,25 +506,36 @@ class MemStorage implements IStorage {
     bodegaItems.forEach(item => this.createBodegaItem(item));
 
     // Pre-seed airbears across Binghamton for rich demo experience
+    // A demo driver "owns" part of the fleet so the booking flow works out of
+    // the box; the remaining available vehicles are claimable by new drivers.
+    const demoDriver = this.createUser({
+      username: 'demo-driver',
+      email: 'driver@airbear.demo',
+      passwordHash: 'demo-not-loginable',
+      role: 'driver',
+    } as any);
+    // createUser is async but mutates the map synchronously; resolve the record
+    const demoDriverId = Array.from(this.users.values()).find(u => u.email === 'driver@airbear.demo')!.id;
+
     const spotsList = Array.from(this.spots.values());
     const airbearConfigs = [
-      { spotIndex: 0, battery: 92, available: true, charging: false },
-      { spotIndex: 1, battery: 78, available: true, charging: false },
-      { spotIndex: 2, battery: 65, available: true, charging: false },
-      { spotIndex: 3, battery: 45, available: false, charging: true },
-      { spotIndex: 5, battery: 88, available: true, charging: false },
-      { spotIndex: 7, battery: 72, available: true, charging: false },
-      { spotIndex: 9, battery: 35, available: false, charging: true },
-      { spotIndex: 10, battery: 95, available: true, charging: false },
-      { spotIndex: 12, battery: 82, available: true, charging: false },
-      { spotIndex: 14, battery: 68, available: false, charging: false },
+      { spotIndex: 0, battery: 92, available: true, charging: false, hasDriver: true },
+      { spotIndex: 1, battery: 78, available: true, charging: false, hasDriver: false },
+      { spotIndex: 2, battery: 65, available: true, charging: false, hasDriver: false },
+      { spotIndex: 3, battery: 45, available: false, charging: true, hasDriver: false },
+      { spotIndex: 5, battery: 88, available: true, charging: false, hasDriver: true },
+      { spotIndex: 7, battery: 72, available: true, charging: false, hasDriver: false },
+      { spotIndex: 9, battery: 35, available: false, charging: true, hasDriver: false },
+      { spotIndex: 10, battery: 95, available: true, charging: false, hasDriver: true },
+      { spotIndex: 12, battery: 82, available: true, charging: false, hasDriver: false },
+      { spotIndex: 14, battery: 68, available: false, charging: false, hasDriver: false },
     ];
 
     airbearConfigs.forEach((config, idx) => {
       const spot = spotsList[config.spotIndex];
       if (spot) {
         this.createAirbear({
-          driverId: null,
+          driverId: config.hasDriver ? demoDriverId : null,
           currentSpotId: spot.id,
           latitude: String(Number(spot.latitude) + (Math.random() - 0.5) * 0.002),
           longitude: String(Number(spot.longitude) + (Math.random() - 0.5) * 0.002),

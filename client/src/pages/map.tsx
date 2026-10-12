@@ -333,7 +333,7 @@ export default function Map() {
 
         // Add Binghamton label
         const label = window.L.divIcon({
-          html: `<div style="background:#10b981;color:white;padding:6px 12px;border-radius:16px;font-weight:bold;font-size:12px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.2);display:flex;align-items:center;gap:4px;"><img src="${MASCOT_DATA_URL}" style="width:16px;height:16px;object-fit:contain;"/> Binghamton, NY</div>`,
+          html: `<div style="background:#10b981;color:white;padding:6px 12px;border-radius:16px;font-weight:bold;font-size:12px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.2);display:flex;align-items:center;gap:4px;"><img src="${MASCOT_DATA_URL}" alt="" style="width:16px;height:16px;object-fit:contain;"/> Binghamton, NY</div>`,
           className: '',
           iconSize: [140, 30],
           iconAnchor: [70, 15]
@@ -388,7 +388,7 @@ export default function Map() {
         html: `
           <div style="position:relative;width:44px;height:44px;">
             <div style="width:44px;height:44px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.3);font-size:18px;">
-              ${hasAirbears ? `<img src="${MASCOT_DATA_URL}" style="width:24px;height:24px;object-fit:contain;"/>` : '📍'}
+              ${hasAirbears ? `<img src="${MASCOT_DATA_URL}" alt="" style="width:24px;height:24px;object-fit:contain;"/>` : '📍'}
             </div>
             ${hasAirbears ? `<div style="position:absolute;top:-4px;right:-4px;background:#22c55e;color:white;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;border:2px solid white;">${availableHere.length}</div>` : ''}
             <div style="position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.75);color:white;padding:2px 6px;border-radius:8px;font-size:9px;white-space:nowrap;">${spot.name}</div>
@@ -435,7 +435,7 @@ export default function Map() {
         html: `
           <div style="position:relative;">
             <div style="width:${isMyDriver ? '48px' : '36px'};height:${isMyDriver ? '48px' : '36px'};border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;border:${isMyDriver ? '4px' : '2px'} solid white;box-shadow:0 ${isMyDriver ? '4' : '2'}px ${isMyDriver ? '12' : '8'}px rgba(0,0,0,${isMyDriver ? '0.4' : '0.3'});font-size:${isMyDriver ? '18px' : '14px'};${isMyDriver ? 'animation:pulse 1.5s infinite;' : ''}">
-              <img src="${MASCOT_DATA_URL}" style="width:${isMyDriver ? '28px' : '20px'};height:${isMyDriver ? '28px' : '20px'};object-fit:contain;"/>${ab.isCharging ? '⚡' : ''}
+              <img src="${MASCOT_DATA_URL}" alt="" style="width:${isMyDriver ? '28px' : '20px'};height:${isMyDriver ? '28px' : '20px'};object-fit:contain;"/>${ab.isCharging ? '⚡' : ''}
             </div>
             ${isMyDriver ? '<div style="position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);background:#ef4444;color:white;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:bold;white-space:nowrap;">YOUR DRIVER</div>' : ''}
           </div>
@@ -759,6 +759,7 @@ export default function Map() {
             return (
               <Card
                 key={spot.id}
+                data-testid={`card-spot-${spot.id}`}
                 className={`cursor-pointer transition-all hover:shadow-md ${
                   selectedSpot?.id === spot.id
                     ? 'border-emerald-500 ring-2 ring-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/20'
@@ -931,6 +932,7 @@ export default function Map() {
               </div>
 
               <Button
+                data-testid="button-confirm-booking"
                 className="w-full bg-emerald-500 hover:bg-emerald-600"
                 onClick={handleBookRide}
                 disabled={!selectedSpot || !selectedDestination || availableAirbearsCount === 0 || user?.role === 'driver'}
@@ -995,6 +997,7 @@ export default function Map() {
 
               {/* Book Button with Pulsing Glow */}
               <Button
+                data-testid="button-book-ride"
                 onClick={() => {
                   if (selectedSpot && selectedDestination) {
                     handleBookRide();

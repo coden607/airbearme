@@ -23,7 +23,7 @@ sleep 10 # Wait for server to be ready
 
 4. Run End-to-End Tests
 ```bash
-npx playwright test tests/app-flow.spec.ts
+npx playwright test
 ```
 
 5. Cleanup

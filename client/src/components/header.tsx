@@ -63,9 +63,10 @@ export default function Header() {
             >
               <AirBearMascot size="lg" className="rounded-full animate-neon-glow" />
               <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 via-lime-500 to-amber-500 bg-clip-text text-transparent text-sm">
+                {/* Logo is not the page heading; each page owns the single h1 */}
+                <span className="block text-2xl font-bold bg-gradient-to-r from-emerald-600 via-lime-500 to-amber-500 bg-clip-text text-transparent text-sm">
                   AirBear
-                </h1>
+                </span>
               </div>
             </motion.div>
           </Link>

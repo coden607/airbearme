@@ -546,7 +546,7 @@ export default function DriverDashboard() {
                                 <div className="text-center py-6">
                                     <Car className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                                     <p className="text-muted-foreground mb-4">No vehicle assigned</p>
-                                    <Button onClick={claimAirbear} className="eco-gradient">
+                                    <Button onClick={claimAirbear} className="eco-gradient" data-testid="button-claim-vehicle">
                                         Claim Available Vehicle
                                     </Button>
                                 </div>

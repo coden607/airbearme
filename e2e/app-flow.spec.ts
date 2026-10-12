@@ -12,11 +12,11 @@ test.describe('AirBear Critical User Flows', () => {
 
         // Check key visible elements
         await expect(page.getByTestId('img-mascot')).toBeVisible();
-        await expect(page.getByText('Solar Powered Rideshare')).toBeVisible();
+        await expect(page.getByText('Mobile Bodega & Solar Rideshare')).toBeVisible();
 
         // Verify Stats are present (even if loading)
         await expect(page.getByTestId('stat-rides')).toBeVisible();
-        await expect(page.getByTestId('stat-co2')).toBeVisible();
+        await expect(page.getByTestId('stat-solar')).toBeVisible();
     });
 
     test('Booking Flow Navigation', async ({ page }) => {
@@ -29,7 +29,7 @@ test.describe('AirBear Critical User Flows', () => {
         await expect(page).toHaveURL(/.*\/map/);
 
         // Wait for map page to load - check for any map-related content
-        await expect(page.getByText('Loading map...').or(page.getByText('Find Your Perfect Ride'))).toBeVisible();
+        await expect(page.getByText('Loading map...').or(page.getByText('Find Your Ride'))).toBeVisible();
     });
 
     test('CEO T-Shirt Promo Interaction', async ({ page }) => {

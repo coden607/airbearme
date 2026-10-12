@@ -79,14 +79,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const client = getSupabaseClient(false);
 
-        // If Supabase is not configured, check localStorage for demo user
+        // If Supabase is not configured, restore the demo user from localStorage
+        // (mock-mode sessions live in a server cookie; this mirrors the Supabase
+        // persistence behavior so a reload does not sign the user out)
         if (!client) {
-          // Clear any existing session data
           const storedUser = localStorage.getItem("airbear-user");
           if (storedUser) {
             try {
               const parsed = JSON.parse(storedUser);
               if (parsed.id) {
+                setUser(parsed);
+              } else {
                 localStorage.removeItem("airbear-user");
               }
             } catch {
