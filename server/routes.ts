@@ -4,6 +4,13 @@ import { insertRideSchema, insertOrderSchema, insertPaymentSchema, updateRideSch
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { env, ApiError, asyncHandler, requireAuth, requireAdmin, hmacSha256, safeCompare } from "./utils.js";
+import {
+  ecoPointsForRide,
+  estimateCo2SavedKg,
+  isRideStatus,
+  isValidRideTransition,
+  quoteRide,
+} from "./fare.js";
 
 
 const logRouteError = (req: Request, error: unknown) => {
@@ -545,7 +552,33 @@ export async function registerRoutes(app: Express): Promise<Express> {
         });
       }
 
-      const ride = await storage.createRide(rideData);
+      // Server-side pricing: the client may suggest a fare, but the quote
+      // is computed from the actual pickup/dropoff spots so riders cannot
+      // understate what they owe.
+      let fare = rideData.fare;
+      let distanceKm: string | null = null;
+      let co2Saved: string | null = null;
+      try {
+        const [pickup, dropoff] = await Promise.all([
+          storage.getSpotById(rideData.pickupSpotId),
+          storage.getSpotById(rideData.dropoffSpotId),
+        ]);
+        if (pickup && dropoff) {
+          const quote = quoteRide(pickup, dropoff, rideData.passengers);
+          fare = quote.fare;
+          distanceKm = quote.distanceKm;
+          co2Saved = estimateCo2SavedKg(quote.distanceMiles);
+        }
+      } catch (pricingError) {
+        console.error('[Rides] Server-side pricing failed, falling back to client fare:', pricingError);
+      }
+
+      const ride = await storage.createRide({
+        ...rideData,
+        fare,
+        distance: distanceKm ?? undefined,
+        co2Saved,
+      });
       console.log('[Rides] Ride created successfully:', ride.id);
       res.json(ride);
     } catch (error: any) {
@@ -658,6 +691,18 @@ export async function registerRoutes(app: Express): Promise<Express> {
       return;
     }
 
+    // Validate lifecycle transitions; terminal rides cannot be revived.
+    if (updates.status && updates.status !== existingRide.status) {
+      const fromStatus = isRideStatus(existingRide.status)
+        ? existingRide.status
+        : "pending";
+      if (!isValidRideTransition(fromStatus, updates.status)) {
+        throw ApiError.conflict(
+          `Illegal ride transition: ${existingRide.status} → ${updates.status}`,
+        );
+      }
+    }
+
     // Auto-set timestamps based on status transitions
     const enrichedUpdates: Record<string, any> = { ...updates };
     if ((updates as any).status === "accepted" && !existingRide.acceptedAt) {
@@ -671,6 +716,28 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
 
     const ride = await storage.updateRide(id, enrichedUpdates);
+
+    // Completing a ride settles the eco ledger: solar miles replace car
+    // miles, so the rider earns CO2 savings, eco points, and a ride count.
+    if (updates.status === "completed" && existingRide.status !== "completed") {
+      try {
+        const rider = await storage.getUser(existingRide.userId);
+        if (rider) {
+          const miles = Number(existingRide.distance ?? 0) / 1.60934;
+          const earned = ecoPointsForRide(miles);
+          const co2 = Number(rider.co2Saved ?? 0) + Number(estimateCo2SavedKg(miles));
+          await storage.updateUser(rider.id, {
+            ecoPoints: (rider.ecoPoints ?? 0) + earned,
+            co2Saved: co2.toFixed(2),
+            totalRides: (rider.totalRides ?? 0) + 1,
+          });
+        }
+      } catch (rewardError) {
+        // Reward settlement must never fail the ride update.
+        console.error('[Rides] Eco reward settlement failed:', rewardError);
+      }
+    }
+
     res.json({ success: true, data: ride });
   }));
 
