@@ -1,20 +1,10 @@
-import { defineConfig } from 'vitest/config'
-import react from '@vitejs/plugin-react'
-import path from 'path'
-import { fileURLToPath } from 'url'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, 'client', 'src'),
-    },
-  },
   test: {
-    environment: 'jsdom',
-    setupFiles: ['./client/src/test/setup.ts'],
-    globals: true,
+    // Unit tests only — Playwright specs under tests/ and e2e/ are run
+    // separately via `npm run test:e2e`.
+    include: ["tests/unit/**/*.test.ts"],
+    environment: "node",
   },
-})
+});
