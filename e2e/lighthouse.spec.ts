@@ -1,120 +1,95 @@
 import { test, expect } from '@playwright/test';
-import { execSync } from 'child_process';
 
 const BASE_URL = 'http://localhost:5000';
 
-test.describe('AirBear PWA - Lighthouse Performance Tests', () => {
-  test.beforeAll(async () => {
-    // Start the development server
-    try {
-      execSync('npm run dev', { stdio: 'pipe', cwd: process.cwd() });
-    } catch (error) {
-      console.log('Server might already be running');
-    }
-  });
-
-  test('Lighthouse performance audit for homepage', async ({ page }) => {
+// PWA installability, SEO, and accessibility smoke checks.
+// These replace the previous Lighthouse wrapper, which could never run:
+// it called require() inside page.evaluate (browser context), depended on
+// packages that are not in the repo, and blocked beforeAll on execSync('npm run dev').
+test.describe('AirBear PWA - Lighthouse-style Quality Gates', () => {
+  test('PWA manifest is valid and installable metadata present', async ({ page }) => {
     await page.goto(BASE_URL);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(3000); // Wait for dynamic content
 
-    // Run Lighthouse audit
-    const lighthouseResult = await page.evaluate(() => {
-      return new Promise((resolve) => {
-        // Import and run Lighthouse
-        import('lighthouse').then((lighthouse) => {
-          const chromeLauncher = require('chrome-launcher');
-          
-          chromeLauncher.launch({ chromeFlags: ['--headless'] }).then((chrome) => {
-            const options = {
-              logLevel: 'info',
-              output: 'json',
-              onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'],
-              port: chrome.port,
-            };
+    const manifestUrl = await page.locator('link[rel="manifest"]').getAttribute('href');
+    expect(manifestUrl).toBeTruthy();
 
-            lighthouse.default(BASE_URL, options).then((results) => {
-              chrome.kill();
-              resolve(results);
-            });
-          });
-        });
-      });
-    });
+    const manifest = await page.evaluate(async (url) => {
+      const res = await fetch(url);
+      return res.json();
+    }, manifestUrl as string);
 
-    // Check performance scores
-    expect(lighthouseResult.lhr.categories.performance.score).toBeGreaterThan(0.8);
-    expect(lighthouseResult.lhr.categories.accessibility.score).toBeGreaterThan(0.9);
-    expect(lighthouseResult.lhr.categories['best-practices'].score).toBeGreaterThan(0.9);
-    expect(lighthouseResult.lhr.categories.seo.score).toBeGreaterThan(0.9);
+    expect(manifest.name).toMatch(/airbear/i);
+    expect(manifest.short_name).toBeTruthy();
+    expect(manifest.start_url).toBeTruthy();
+    expect(manifest.display).toMatch(/standalone|minimal-ui|fullscreen/);
+    expect(manifest.icons).toBeTruthy();
+    expect(manifest.icons.length).toBeGreaterThan(0);
+    // Maskable icon required for full installability
+    expect(manifest.icons.some((icon: any) => (icon.purpose || '').includes('maskable'))).toBe(true);
 
-    console.log('Performance Scores:', {
-      performance: lighthouseResult.lhr.categories.performance.score * 100,
-      accessibility: lighthouseResult.lhr.categories.accessibility.score * 100,
-      bestPractices: lighthouseResult.lhr.categories['best-practices'].score * 100,
-      seo: lighthouseResult.lhr.categories.seo.score * 100,
-    });
+    // Theme/browser colors for installed display
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', /\S+/);
+    await expect(page.locator('meta[name="mobile-web-app-capable"], meta[name="mobile-web-app-capable"]')).toHaveCount(1);
+    await expect(page.locator('meta[name="apple-mobile-web-app-capable"]')).toHaveCount(1);
   });
 
-  test('Core Web Vitals validation', async ({ page }) => {
-    const metrics = await page.goto(BASE_URL).then(() => {
-      return page.evaluate(() => {
-        return new Promise((resolve) => {
-          const observer = new PerformanceObserver((list) => {
-            const entries = list.getEntries();
-            const vitals = {};
-            
-            entries.forEach((entry) => {
-              if (entry.entryType === 'largest-contentful-paint') {
-                vitals.lcp = entry.startTime;
-              } else if (entry.entryType === 'first-input') {
-                vitals.fid = entry.processingStart - entry.startTime;
-              } else if (entry.entryType === 'layout-shift') {
-                vitals.cls = (vitals.cls || 0) + entry.value;
-              }
-            });
-            
-            resolve(vitals);
-          });
-          
-          observer.observe({ entryTypes: ['largest-contentful-paint', 'first-input', 'layout-shift'] });
-          
-          // Fallback timeout
-          setTimeout(() => resolve({}), 5000);
-        });
-      });
-    });
-
-    // Validate Core Web Vitals thresholds
-    if (metrics.lcp) expect(metrics.lcp).toBeLessThan(2500); // Good: <2.5s
-    if (metrics.fid) expect(metrics.fid).toBeLessThan(100);  // Good: <100ms
-    if (metrics.cls) expect(metrics.cls).toBeLessThan(0.1);  // Good: <0.1
-
-    console.log('Core Web Vitals:', metrics);
-  });
-
-  test('PWA functionality validation', async ({ page }) => {
+  test('Service worker registers for offline support', async ({ page }) => {
     await page.goto(BASE_URL);
     await page.waitForLoadState('networkidle');
 
-    // Check for service worker
-    const swRegistration = await page.evaluate(() => {
-      return navigator.serviceWorker.ready.then(registration => !!registration.active);
+    const swState = await page.evaluate(async () => {
+      if (!('serviceWorker' in navigator)) return 'unsupported';
+      const registration = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise((resolve) => setTimeout(() => resolve('timeout'), 10000)),
+      ]);
+      if (registration === 'timeout') return 'timeout';
+      return (registration as ServiceWorkerRegistration).active ? 'active' : 'inactive';
     });
-    expect(swRegistration).toBe(true);
 
-    // Check for manifest
-    const manifest = await page.evaluate(() => {
-      const link = document.querySelector('link[rel="manifest"]');
-      return link ? link.getAttribute('href') : null;
-    });
-    expect(manifest).toBeTruthy();
+    expect(swState).toBe('active');
+  });
 
-    // Check for responsive design
-    const viewport = await page.evaluate(() => {
-      const meta = document.querySelector('meta[name="viewport"]');
-      return meta ? meta.getAttribute('content') : null;
-    });
+  test('SEO metadata on the homepage', async ({ page }) => {
+    await page.goto(BASE_URL);
+
+    await expect(page).toHaveTitle(/AirBear/i);
+    await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /\S+/);
+    await expect(page.locator('meta[property="og:title"]')).toHaveCount(1);
+    await expect(page.locator('meta[property="og:description"]')).toHaveCount(1);
+    await expect(page.locator('link[rel="canonical"], meta[property="og:url"]')).not.toHaveCount(0);
+  });
+
+  test('Accessibility basics on main user flows', async ({ page }) => {
+    // Homepage
+    await page.goto(BASE_URL);
+    await expect(page.locator('main, [role="main"]')).toHaveCount(1);
+    await expect(page.locator('h1')).toHaveCount(1);
+    await expect(page.locator('nav').first()).toBeVisible();
+    // All images must carry alternative text
+    const imagesWithoutAlt = await page.locator('img:not([alt])').count();
+    expect(imagesWithoutAlt).toBe(0);
+
+    // Map/booking page keeps landmarks and heading order
+    await page.goto(`${BASE_URL}/map`);
+    await expect(page.locator('main, [role="main"]')).toHaveCount(1);
+    const mapImagesWithoutAlt = await page.locator('img:not([alt])').count();
+    expect(mapImagesWithoutAlt).toBe(0);
+
+    // Auth form inputs are labeled
+    await page.goto(`${BASE_URL}/auth`);
+    const emailInput = page.getByTestId('input-email');
+    await expect(emailInput).toHaveAttribute('id', /\S+/);
+    const emailId = await emailInput.getAttribute('id');
+    await expect(page.locator(`label[for="${emailId}"]`)).toHaveCount(1);
+  });
+
+  test('Mobile viewport configured for PWA flows', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(BASE_URL);
+    const viewport = await page.evaluate(() => document.querySelector('meta[name="viewport"]')?.getAttribute('content') || '');
     expect(viewport).toContain('width=device-width');
+    // Header stays usable on a phone-sized viewport
+    await expect(page.getByTestId('button-mobile-menu')).toBeVisible();
   });
 });
